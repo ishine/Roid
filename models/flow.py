@@ -99,10 +99,10 @@ class AffineCoupling(nn.Module):
         params = self.net(params, z_mask, g=g)
         params = self.end(params)
         t = params[:, :self.split_channels, :]
-        s = torch.tanh(params[:, self.split_channels:]) * self.s_log_scale + self.s_bias
+        s = params[:, self.split_channels:, :]
 
         z0 = z0 * torch.exp(s) + t
-        log_df_dz += torch.sum(s.view(z0.size(0), -1), dim=1)
+        log_df_dz += torch.sum(s, dim=[1, 2])
 
         return z0, z1, log_df_dz
 
@@ -110,11 +110,11 @@ class AffineCoupling(nn.Module):
         params = self.start(y1) * y_mask
         params = self.net(params, y_mask, g=g)
         params = self.end(params)
-        t = params[:, :self.split_channels]
-        s = torch.tanh(params[:, self.split_channels:]) * self.s_log_scale + self.s_bias
+        t = params[:, :self.split_channels, :]
+        s = params[:, self.split_channels:, :]
 
         y0 = torch.exp(-s) * (y0 - t)
-        log_df_dz -= torch.sum(s.view(y0.size(0), -1), dim=1)
+        log_df_dz -= torch.sum(s, dim=[1, 2])
 
         return y0, y1, log_df_dz
 
@@ -137,8 +137,8 @@ class ActNorm(nn.Module):
         self.eps = eps
 
         self.dimensions = [1, channels, 1]
-        self.register_parameter('log_scale', nn.Parameter(torch.zeros(self.dimensions)))
-        self.register_parameter('bias', nn.Parameter(torch.zeros(self.dimensions)))
+        self.log_scale = nn.Parameter(torch.zeros(self.dimensions))
+        self.bias = nn.Parameter(torch.zeros(self.dimensions))
         self.initialized = False
 
     def forward(self, z, z_mask, log_df_dz, **kwargs):
@@ -150,7 +150,6 @@ class ActNorm(nn.Module):
             self.initialized = True
 
         z = (z - self.bias) / torch.exp(self.log_scale)
-
         length = torch.sum(z_mask, dim=[1, 2])
         log_df_dz += torch.sum(self.log_scale) * length
         return z, log_df_dz
