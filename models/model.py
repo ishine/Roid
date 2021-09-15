@@ -41,13 +41,14 @@ class TTSModel(nn.Module):
         z_mask = sequence_mask(y_length).unsqueeze(1).to(x.dtype)
 
         x = self.encoder(x, pos_emb, x_mask)
-        x = self.proj_mu(x)
+        x_mu = self.proj_mu(x)
 
         attn_mask = torch.unsqueeze(x_mask, -1) * torch.unsqueeze(z_mask, 2)
         path = generate_path(duration.squeeze(1), attn_mask.squeeze(1))
 
-        x, (dur_pred, pitch_pred, energy_pred) = self.variance_adopter(
+        x_mu, (dur_pred, pitch_pred, energy_pred) = self.variance_adopter(
             x,
+            x_mu,
             x_mask,
             z_mask,
             pitch,
@@ -66,7 +67,8 @@ class TTSModel(nn.Module):
         x_mask = sequence_mask(x_length).unsqueeze(1).to(x.dtype)
         x, pos_emb = self.relative_pos_emb(x)
         x = self.encoder(x, pos_emb, x_mask)
+        x_mu = self.proj_mu(x)
 
-        x, y_mask = self.variance_adopter.infer(x, x_mask)
+        x, y_mask = self.variance_adopter.infer(x, x_mu, x_mask)
         x, _ = self.decoder.backward(x, y_mask)
         return x

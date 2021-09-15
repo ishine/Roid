@@ -31,6 +31,7 @@ class VarianceAdopter(nn.Module):
     def forward(
         self,
         x,
+        x_mu,
         x_mask,
         y_mask,
         pitch,
@@ -42,10 +43,10 @@ class VarianceAdopter(nn.Module):
         pitch_pred = self.pitch_predictor(x, y_mask)
         energy_pred = self.energy_predictor(x, y_mask)
 
-        x += pitch + energy
-        return x, (dur_pred, pitch_pred, energy_pred)
+        x_mu += pitch + energy
+        return x_mu, (dur_pred, pitch_pred, energy_pred)
 
-    def infer(self, x, x_mask):
+    def infer(self, x, x_mu, x_mask):
         dur_pred = self.duration_predictor(x, x_mask)
         dur_pred = torch.exp(dur_pred)
         dur_pred = torch.round(dur_pred) * x_mask
@@ -60,8 +61,8 @@ class VarianceAdopter(nn.Module):
         pitch = self.pitch_predictor(x, y_mask)
         energy = self.energy_predictor(x, y_mask)
 
-        x += pitch + energy
-        return x, y_mask
+        x_mu += pitch + energy
+        return x_mu, y_mask
 
 
 class VariancePredictor(nn.Module):
