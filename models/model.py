@@ -41,7 +41,7 @@ class TTSModel(nn.Module):
         z_mask = sequence_mask(y_length).unsqueeze(1).to(x.dtype)
 
         x = self.encoder(x, pos_emb, x_mask)
-        x_mu = self.proj_mu(x)
+        x = self.proj_mu(x)
 
         attn_mask = torch.unsqueeze(x_mask, -1) * torch.unsqueeze(z_mask, 2)
         path = generate_path(duration.squeeze(1), attn_mask.squeeze(1))
@@ -57,7 +57,7 @@ class TTSModel(nn.Module):
         z, log_df_dz = self.decoder(y, z_mask)
         z *= z_mask
 
-        return x_mu, (z, log_df_dz), (dur_pred, pitch_pred, energy_pred), (x_mask, z_mask)
+        return x, (z, log_df_dz), (dur_pred, pitch_pred, energy_pred), (x_mask, z_mask)
 
     def infer(self, phoneme, a1, f2, x_length):
         x = self.emb(phoneme, a1, f2)
