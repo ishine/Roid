@@ -118,11 +118,13 @@ class AffineCoupling(nn.Module):
 
         return y0, y1, log_df_dz
 
+    @staticmethod
     def squeeze(z, dim=1):
         C = z.size(dim)
         z0, z1 = torch.split(z, C // 2, dim=dim)
         return z0, z1
 
+    @staticmethod
     def unsqueeze(z0, z1, dim=1):
         z = torch.cat([z0, z1], dim=dim)
         return z
