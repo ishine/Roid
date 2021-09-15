@@ -224,13 +224,13 @@ class InvConvNear(nn.Module):
             w_init[:, 0] = -1 * w_init[:, 0]
         self.weight = nn.Parameter(w_init)
 
-    def forward(self, z, z_mask, log_df_dt, **kwargs):
-        return self.process(z, z_mask, log_df_dt, forward=True)
+    def forward(self, z, z_mask, log_df_dz, **kwargs):
+        return self.process(z, z_mask, log_df_dz, forward=True)
 
-    def backward(self, y, y_mask, log_df_dt, **kwargs):
-        return self.process(y, y_mask, log_df_dt, forward=False)
+    def backward(self, y, y_mask, log_df_dz, **kwargs):
+        return self.process(y, y_mask, log_df_dz, forward=False)
 
-    def process(self, x, x_mask, log_df_dt, forward=True):
+    def process(self, x, x_mask, log_df_dz, forward=True):
         B, C, T = x.size()
         x = x.view(B, 2, C // self.n_split, self.n_split // 2, T)
         x = x.permute(0, 1, 3, 2, 4).contiguous().view(B, self.n_split, C // self.n_split, T)
@@ -238,16 +238,16 @@ class InvConvNear(nn.Module):
 
         if forward:
             weight = self.weight
-            log_df_dt += torch.logdet(weight) * (C / self.n_split) * length
+            log_df_dz += torch.logdet(weight) * (C / self.n_split) * length
         else:
             weight = torch.inverse(self.weight.float()).to(dtype=self.weight.dtype)
-            log_df_dt += torch.logdet(weight) * (C / self.n_split) * length
+            log_df_dz += torch.logdet(weight) * (C / self.n_split) * length
 
         weight = weight.view(self.n_split, self.n_split, 1, 1)
         z = F.conv2d(x, weight)
 
         z = z.view(B, 2, self.n_split // 2, C // self.n_split, T)
         z = z.permute(0, 1, 3, 2, 4).contiguous().view(B, C, T) * x_mask
-        return z, log_df_dt
+        return z, log_df_dz
 
 
