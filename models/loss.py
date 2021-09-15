@@ -9,4 +9,5 @@ def mle_loss(z, m, log_df_dz, mask):
     loss -= torch.sum(log_df_dz)
     loss /= torch.sum(mask)
     loss += constant_term
+    print(loss)
     return loss
