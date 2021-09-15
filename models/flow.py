@@ -15,7 +15,7 @@ class Glow(nn.Module):
         self.flows = nn.ModuleList()
         for _ in range(num_flows):
             self.flows.append(ActNorm(in_channels * n_sqz))
-            self.flows.append(InvertibleConv1x1(in_channels * n_sqz))
+            self.flows.append(InvConvNear(in_channels * n_sqz))
             self.flows.append(AffineCoupling(in_channels * n_sqz, channels, kernel_size, num_layers, gin_channels, dropout))
 
     def forward(self, z, z_mask, g=None):
