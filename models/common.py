@@ -21,6 +21,11 @@ class EmbeddingLayer(nn.Module):
         return x
 
 
+class PreNet(nn.Module):
+    def __init__(self):
+        super(PreNet, self).__init__()
+
+
 class WaveNet(nn.Module):
     def __init__(self, channels, kernel_size, num_layers, dilation_rate=1, gin_channels=0, dropout=0):
         super(WaveNet, self).__init__()

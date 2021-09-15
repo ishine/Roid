@@ -13,9 +13,9 @@ class Glow(nn.Module):
 
         self.flows = nn.ModuleList()
         for _ in range(num_flows):
-            self.flows.append(ActNorm(in_channels))
-            self.flows.append(InvertibleConv1x1(in_channels))
-            self.flows.append(AffineCoupling(in_channels, channels, kernel_size, num_layers, gin_channels, dropout))
+            self.flows.append(ActNorm(in_channels * n_sqz))
+            self.flows.append(InvertibleConv1x1(in_channels * n_sqz))
+            self.flows.append(AffineCoupling(in_channels * n_sqz, channels, kernel_size, num_layers, gin_channels, dropout))
 
     def forward(self, z, z_mask, g=None):
         if self.n_sqz > 1:
@@ -31,7 +31,7 @@ class Glow(nn.Module):
         if self.n_sqz > 1:
             y, y_mask = self.squeeze(y, y_mask, self.n_sqz)
         log_df_dz = 0
-        for flow in self.flows:
+        for flow in reversed(self.flows):
             y, log_df_dz = flow.backward(y=y, y_mask=y_mask, log_dz_df=log_df_dz, g=g)
         if self.n_sqz > 1:
             y, y_mask = self.unsqueeze(y, y_mask, self.n_sqz)
