@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from .attention import LayerNorm
+from .common import LayerNorm
 from .utils import sequence_mask, generate_path
 
 
@@ -47,9 +47,9 @@ class VariancePredictor(nn.Module):
 
         self.layers = nn.ModuleList([
             nn.Sequential(
-                LayerNorm(channels),
                 nn.Conv1d(channels, channels, kernel_size, padding=kernel_size // 2),
                 nn.SiLU(),
+                LayerNorm(channels),
                 nn.Dropout(dropout)
             ) for _ in range(n_layers)
         ])
