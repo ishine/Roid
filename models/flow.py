@@ -155,7 +155,7 @@ class InvertibleConv1x1(nn.Module):
         W = self.P @ L @ U
         z = torch.matmul(W, z)
 
-        length = torch.sum(z_mask)
+        length = torch.sum(z_mask, dim=[1, 2])
         log_df_dz += torch.sum(self.log_s, dim=0) * length
 
         return z, log_df_dz
