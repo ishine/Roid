@@ -24,8 +24,10 @@ model:
     n_layers: 6
     dropout: 0.1
 
-  variance_adopter:
+  variance_predictor:
     channels: 192
+    n_layers: 2
+    kernel_size: 5
     dropout: 0.1
 
   decoder:
