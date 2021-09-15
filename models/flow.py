@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from .common import WaveNet
 
@@ -32,7 +33,7 @@ class Glow(nn.Module):
             y, y_mask = self.squeeze(y, y_mask, self.n_sqz)
         log_df_dz = 0
         for flow in reversed(self.flows):
-            y, log_df_dz = flow.backward(y=y, y_mask=y_mask, log_dz_df=log_df_dz, g=g)
+            y, log_df_dz = flow.backward(y=y, y_mask=y_mask, log_df_dz=log_df_dz, g=g)
         if self.n_sqz > 1:
             y, y_mask = self.unsqueeze(y, y_mask, self.n_sqz)
         return y, log_df_dz, y_mask
@@ -209,3 +210,41 @@ class InvertibleConv1x1(nn.Module):
         log_df_dz -= torch.sum(self.log_s, dim=0) * length
 
         return y, log_df_dz
+
+
+class InvConvNear(nn.Module):
+    def __init__(self, channels, n_split=4):
+        super().__init__()
+        assert (n_split % 2 == 0)
+        self.channels = channels
+        self.n_split = n_split
+
+        w_init = torch.linalg.qr(torch.FloatTensor(self.n_split, self.n_split).normal_())[0]
+        if torch.det(w_init) < 0:
+            w_init[:, 0] = -1 * w_init[:, 0]
+        self.weight = nn.Parameter(w_init)
+
+    def forward(self, x, x_mask, log_df_dt, **kwargs):
+        self.process(x, x_mask, log_df_dt, forward=True)
+
+    def process(self, x, x_mask, log_df_dt, forward=True):
+        B, C, T = x.size()
+        x = x.view(B, 2, C // self.n_split, self.n_split // 2, T)
+        x = x.permute(0, 1, 3, 2, 4).contiguous().view(B, self.n_split, C // self.n_split, T)
+        length = torch.sum(x_mask, [1, 2])
+
+        if forward:
+            weight = self.weight
+            log_df_dt += torch.logdet(weight) * (C / self.n_split) * length
+        else:
+            weight = torch.inverse(self.weight.float()).to(dtype=self.weight.dtype)
+            log_df_dt += torch.logdet(weight) * (C / self.n_split) * length
+
+        weight = weight.view(self.n_split, self.n_split, 1, 1)
+        z = F.conv2d(x, weight)
+
+        z = z.view(B, 2, self.n_split // 2, C // self.n_split, T)
+        z = z.permute(0, 1, 3, 2, 4).contiguous().view(B, C, T) * x_mask
+        return z, log_df_dt
+
+

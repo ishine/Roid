@@ -21,11 +21,6 @@ class EmbeddingLayer(nn.Module):
         return x
 
 
-class PreNet(nn.Module):
-    def __init__(self):
-        super(PreNet, self).__init__()
-
-
 class WaveNet(nn.Module):
     def __init__(self, channels, kernel_size, num_layers, dilation_rate=1, gin_channels=0, dropout=0):
         super(WaveNet, self).__init__()
@@ -37,13 +32,13 @@ class WaveNet(nn.Module):
             dilation = dilation_rate ** i
             padding = int((kernel_size * dilation - dilation) / 2)
             conv = nn.Conv1d(channels, channels, kernel_size, padding=padding, dilation=dilation)
-            conv = torch.nn.utils.weight_norm(conv, name='weight')
+            conv = nn.utils.weight_norm(conv)
             self.dilated_convs.append(conv)
 
         self.out_convs = nn.ModuleList()
         for i in range(num_layers):
             conv = nn.Conv1d(channels, channels*2, 1)
-            conv = torch.nn.utils.weight_norm(conv, name='weight')
+            conv = nn.utils.weight_norm(conv)
             self.out_convs.append(conv)
 
         self.dropout = nn.Dropout(dropout)
@@ -56,9 +51,9 @@ class WaveNet(nn.Module):
             g = self.cond_layer(g)
         out = 0
         for d_conv, o_conv in zip(self.dilated_convs, self.out_convs):
-            if g is not None:
-                x += g
             x_in = d_conv(x)
+            if g is not None:
+                x_in += g
             x_in = x_in.sigmoid() * x_in.tanh()
             o1, o2 = o_conv(x_in).chunk(2, dim=1)
             x = (x + o1) * x_mask
