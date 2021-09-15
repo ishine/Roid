@@ -1,7 +1,6 @@
 import math
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 
 class EmbeddingLayer(nn.Module):
@@ -122,15 +121,6 @@ class LayerNorm(nn.Module):
 
         x = x * self.gamma.view(1, -1, 1) + self.beta.view(1, -1, 1)
         return x
-
-
-class GLU(nn.Module):
-    def __init__(self, dim):
-        super(GLU, self).__init__()
-        self.dim = dim
-
-    def forward(self, x):
-        return F.glu(x, self.dim)
 
 
 class RelPositionalEncoding(nn.Module):
