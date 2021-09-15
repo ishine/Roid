@@ -30,9 +30,7 @@ class TTSModel(nn.Module):
         x_length,
         y,
         y_length,
-        duration,
-        pitch,
-        energy
+        duration
     ):
         x = self.emb(phoneme, a1, f2)
         x, pos_emb = self.relative_pos_emb(x)
@@ -46,19 +44,11 @@ class TTSModel(nn.Module):
         attn_mask = torch.unsqueeze(x_mask, -1) * torch.unsqueeze(z_mask, 2)
         path = generate_path(duration.squeeze(1), attn_mask.squeeze(1))
 
-        x_mu, (dur_pred, pitch_pred, energy_pred) = self.variance_adopter(
-            x,
-            x_mu,
-            x_mask,
-            z_mask,
-            pitch,
-            energy,
-            path
-        )
+        x_mu, dur_pred = self.variance_adopter(x, x_mu, x_mask, path)
         z, log_df_dz = self.decoder(y, z_mask)
         z *= z_mask
 
-        return x_mu, (z, log_df_dz), (dur_pred, pitch_pred, energy_pred), (x_mask, z_mask)
+        return x_mu, (z, log_df_dz), dur_pred, (x_mask, z_mask)
 
     def infer(self, phoneme, a1, f2, x_length):
         x = self.emb(phoneme, a1, f2)

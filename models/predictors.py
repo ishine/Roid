@@ -15,37 +15,17 @@ class VarianceAdopter(nn.Module):
             dropout=dropout
         )
         self.length_regulator = LengthRegulator()
-        self.pitch_predictor = VariancePredictor(
-            channels=channels,
-            n_layers=2,
-            kernel_size=3,
-            dropout=dropout
-        )
-        self.energy_predictor = VariancePredictor(
-            channels=channels,
-            n_layers=2,
-            kernel_size=3,
-            dropout=dropout
-        )
 
     def forward(
         self,
         x,
         x_mu,
         x_mask,
-        y_mask,
-        pitch,
-        energy,
         path
     ):
         dur_pred = self.duration_predictor(x, x_mask)
-        x = self.length_regulator(x, path)
         x_mu = self.length_regulator(x_mu, path)
-        pitch_pred = self.pitch_predictor(x, y_mask)
-        energy_pred = self.energy_predictor(x, y_mask)
-
-        x_mu += pitch + energy
-        return x_mu, (dur_pred, pitch_pred, energy_pred)
+        return x_mu, dur_pred
 
     def infer(self, x, x_mu, x_mask):
         dur_pred = self.duration_predictor(x, x_mask)
@@ -57,13 +37,7 @@ class VarianceAdopter(nn.Module):
 
         path = generate_path(dur_pred.squeeze(1), attn_mask.squeeze(1))
 
-        x = self.length_regulator(x, path)
         x_mu = self.length_regulator(x_mu, path)
-
-        pitch = self.pitch_predictor(x, y_mask)
-        energy = self.energy_predictor(x, y_mask)
-
-        x_mu += pitch + energy
         return x_mu, y_mask
 
 
