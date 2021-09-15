@@ -45,8 +45,8 @@ class AffineCoupling(nn.Module):
 
         self.split_channels = in_channels // 2
 
-        self.register_parameter('s_log_scale', nn.Parameter(torch.randn(1) * 0.01))
-        self.register_parameter('s_bias', nn.Parameter(torch.randn(1) * 0.01))
+        self.s_log_scale = nn.Parameter(torch.randn(1) * 0.01)
+        self.s_bias = nn.Parameter(torch.randn(1) * 0.01)
 
         self.start = torch.nn.utils.weight_norm(nn.Conv1d(in_channels // 2, channels, 1))
         self.net = WaveNet(channels, kernel_size, num_layers, gin_channels=gin_channels, dropout=dropout)
