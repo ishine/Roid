@@ -225,7 +225,10 @@ class InvConvNear(nn.Module):
         self.weight = nn.Parameter(w_init)
 
     def forward(self, z, z_mask, log_df_dt, **kwargs):
-        self.process(z, z_mask, log_df_dt, forward=True)
+        return self.process(z, z_mask, log_df_dt, forward=True)
+
+    def backward(self, y, y_mask, log_df_dt, **kwargs):
+        return self.process(y, y_mask, log_df_dt, forward=False)
 
     def process(self, x, x_mask, log_df_dt, forward=True):
         B, C, T = x.size()
