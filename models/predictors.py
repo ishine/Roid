@@ -40,6 +40,7 @@ class VarianceAdopter(nn.Module):
     ):
         dur_pred = self.duration_predictor(x, x_mask)
         x = self.length_regulator(x, path)
+        x_mu = self.length_regulator(x_mu, path)
         pitch_pred = self.pitch_predictor(x, y_mask)
         energy_pred = self.energy_predictor(x, y_mask)
 
@@ -57,6 +58,7 @@ class VarianceAdopter(nn.Module):
         path = generate_path(dur_pred.squeeze(1), attn_mask.squeeze(1))
 
         x = self.length_regulator(x, path)
+        x_mu = self.length_regulator(x_mu, path)
 
         pitch = self.pitch_predictor(x, y_mask)
         energy = self.energy_predictor(x, y_mask)
