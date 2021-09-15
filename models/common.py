@@ -56,7 +56,7 @@ class PreNet(nn.Module):
     def forward(self, x, x_mask):
         residual = x
         for layer in self.layers:
-            x = layer(x)
+            x = layer(x, x_mask)
         x = residual + self.out(x)
         x *= x_mask
         return x
