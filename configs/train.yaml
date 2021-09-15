@@ -34,7 +34,7 @@ model:
     num_flows: 12
     num_layers: 4
     n_sqz: 2
-    dropout: 0.1
+    dropout: 0.05
 
 optimizer:
   lr: 1.0

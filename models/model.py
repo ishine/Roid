@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from .common import EmbeddingLayer, RelPositionalEncoding
+from .common import EmbeddingLayer, RelPositionalEncoding, PreNet
 from .transformer import Transformer
 from .predictors import VarianceAdopter
 from .flow import Glow
@@ -17,6 +17,7 @@ class TTSModel(nn.Module):
             params.encoder.channels,
             params.encoder.dropout
         )
+        self.pre_net = PreNet(params.encoder.channels)
         self.encoder = Transformer(**params.encoder)
         self.proj_mu = nn.Conv1d(params.encoder.channels, params.n_mel, 1)
         self.variance_adopter = VarianceAdopter(**params.variance_adopter)
@@ -38,6 +39,7 @@ class TTSModel(nn.Module):
         x_mask = sequence_mask(x_length).unsqueeze(1).to(x.dtype)
         z_mask = sequence_mask(y_length).unsqueeze(1).to(x.dtype)
 
+        x = self.pre_net(x, x_mask)
         x = self.encoder(x, pos_emb, x_mask)
         x_mu = self.proj_mu(x)
 
@@ -57,6 +59,8 @@ class TTSModel(nn.Module):
 
         x_mask = sequence_mask(x_length).unsqueeze(1).to(x.dtype)
         x, pos_emb = self.relative_pos_emb(x)
+
+        x = self.pre_net(x, x_mask)
         x = self.encoder(x, pos_emb, x_mask)
         x_mu = self.proj_mu(x)
 

@@ -1,7 +1,7 @@
 import torch.nn as nn
 
 from .attention import RelativeSelfAttentionLayer
-from .common import FFN
+from .common import FFN, LayerNorm
 
 
 class TransformerLayer(nn.Module):
@@ -11,11 +11,15 @@ class TransformerLayer(nn.Module):
                  dropout):
         super(TransformerLayer, self).__init__()
         self.mha = RelativeSelfAttentionLayer(channels, n_heads, dropout)
+        self.norm1 = LayerNorm(channels)
         self.ff = FFN(channels, dropout)
+        self.norm2 = LayerNorm(channels)
 
     def forward(self, x, pos_emb, x_mask):
-        x += self.mha(x, pos_emb, x_mask)
-        x += self.ff(x, x_mask)
+        y = self.mha(x, pos_emb, x_mask)
+        x = self.norm1(x + y)
+        y = self.ff(x, x_mask)
+        x = self.norm2(x + y)
         x *= x_mask
         return x
 

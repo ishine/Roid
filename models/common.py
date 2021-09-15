@@ -21,6 +21,47 @@ class EmbeddingLayer(nn.Module):
         return x
 
 
+class ConvLayer(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, dropout=0.5):
+        super(ConvLayer, self).__init__()
+        self.conv = nn.Conv1d(in_channels, out_channels, kernel_size, padding=kernel_size // 2)
+        self.norm = LayerNorm(out_channels)
+        self.act = nn.ReLU()
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x, x_mask):
+        x = self.conv(x * x_mask)
+        x = self.norm(x)
+        x = self.act(x)
+        x = self.dropout(x)
+        return x
+
+
+class PreNet(nn.Module):
+    def __init__(self, channels, n_layers=3, kernel_size=5, dropout=0.5):
+        super(PreNet, self).__init__()
+
+        self.layers = nn.ModuleList([
+            ConvLayer(
+                channels,
+                channels,
+                kernel_size,
+                dropout
+            ) for _ in range(n_layers)
+        ])
+        self.out = nn.Conv1d(channels, channels, 1)
+        self.out.weight.data.zero_()
+        self.out.bias.data.zero_()
+
+    def forward(self, x, x_mask):
+        residual = x
+        for layer in self.layers:
+            x = layer(x)
+        x = residual + self.out(x)
+        x *= x_mask
+        return x
+
+
 class WaveNet(nn.Module):
     def __init__(self, channels, kernel_size, num_layers, dilation_rate=1, gin_channels=0, dropout=0):
         super(WaveNet, self).__init__()
@@ -62,47 +103,20 @@ class WaveNet(nn.Module):
         return out * x_mask
 
 
-class ConvolutionModule(nn.Module):
-    def __init__(self, channels, kernel_size, dropout):
-        super(ConvolutionModule, self).__init__()
-        self.layer_norm = LayerNorm(channels)
-        self.conv1 = nn.Conv1d(channels, channels * 2, 1)
-        self.glu = GLU(dim=1)
-        self.depth_wise_conv = nn.Conv1d(channels, channels, kernel_size, padding=kernel_size // 2, groups=channels)
-        self.batch_norm = nn.BatchNorm1d(channels)
-        self.act = nn.SiLU()
-        self.conv2 = nn.Conv1d(channels, channels, 1)
-        self.dropout = nn.Dropout(dropout)
-
-    def forward(self, x, x_mask):
-        x = self.layer_norm(x)
-        x = self.conv1(x) * x_mask
-        x = self.glu(x)
-        x = self.depth_wise_conv(x) * x_mask
-        x = self.batch_norm(x)
-        x = self.act(x)
-        x = self.conv2(x) * x_mask
-        x = self.dropout(x)
-        return x
-
-
 class FFN(nn.Module):
-    def __init__(self, channels, dropout):
+    def __init__(self, channels, kernel_size=5, dropout=0.1):
         super(FFN, self).__init__()
 
-        self.norm = LayerNorm(channels)
-        self.conv1 = nn.Conv1d(channels, channels, 1)
+        self.conv1 = nn.Conv1d(channels, channels, kernel_size, padding=kernel_size // 2)
         self.act = nn.SiLU()
-        self.conv2 = nn.Conv1d(channels, channels, 1)
+        self.conv2 = nn.Conv1d(channels, channels, kernel_size, padding=kernel_size // 2)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x, x_mask):
-        x = self.norm(x)
         x = self.conv1(x)
         x = self.act(x)
         x = self.dropout(x)
         x = self.conv2(x * x_mask)
-        x = self.dropout(x)
         return x * x_mask
 
 
