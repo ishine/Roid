@@ -73,6 +73,15 @@ class TTSModel(nn.Module):
         x = self.encoder(x, pos_emb, x_mask)
         x_mu = self.proj_mu(x)
 
-        x_mu, y_mask = self.variance_adopter.infer(x, x_mu, x_mask)
+        dur_pred = self.duration_predictor(x, x_mask)
+        dur_pred = torch.exp(dur_pred)
+        dur_pred = torch.round(dur_pred) * x_mask
+        y_lengths = torch.clamp_min(torch.sum(dur_pred, [1, 2]), 1).long()
+        y_mask = sequence_mask(y_lengths).unsqueeze(1).to(x_mask.device)
+        attn_mask = torch.unsqueeze(x_mask, -1) * torch.unsqueeze(y_mask, 2)
+
+        path = generate_path(dur_pred.squeeze(1), attn_mask.squeeze(1))
+        x_mu = torch.matmul(x_mu, path)
+
         y, *_ = self.decoder.backward(x_mu, y_mask)
         return y
