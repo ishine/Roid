@@ -73,8 +73,8 @@ class AffineCoupling(nn.Module):
 
         self.split_channels = in_channels // 2
 
-        self.s_log_scale = nn.Parameter(torch.randn(1) * 0.01)
-        self.s_bias = nn.Parameter(torch.randn(1) * 0.01)
+        self.register_parameter('s_log_scale', nn.Parameter(torch.randn(1) * 0.01))
+        self.register_parameter('s_bias', nn.Parameter(torch.randn(1) * 0.01))
 
         self.start = torch.nn.utils.weight_norm(nn.Conv1d(in_channels // 2, channels, 1))
         self.net = WaveNet(channels, kernel_size, num_layers, gin_channels=gin_channels, dropout=dropout)
@@ -137,8 +137,8 @@ class ActNorm(nn.Module):
         self.eps = eps
 
         self.dimensions = [1, channels, 1]
-        self.log_scale = nn.Parameter(torch.zeros(self.dimensions))
-        self.bias = nn.Parameter(torch.zeros(self.dimensions))
+        self.register_parameter('log_scale', nn.Parameter(torch.zeros(self.dimensions)))
+        self.register_parameter('bias', nn.Parameter(torch.zeros(self.dimensions)))
         self.initialized = False
 
     def forward(self, z, z_mask, log_df_dz, **kwargs):
@@ -150,6 +150,7 @@ class ActNorm(nn.Module):
             self.initialized = True
 
         z = (z - self.bias) / torch.exp(self.log_scale)
+
         length = torch.sum(z_mask, dim=[1, 2])
         log_df_dz += torch.sum(self.log_scale) * length
         return z, log_df_dz
