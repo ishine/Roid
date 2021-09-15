@@ -5,17 +5,13 @@ import torch.nn as nn
 from .common import WaveNet
 
 
-def squeeze(z, dim=1, odd=False):
+def squeeze(z, dim=1):
     C = z.size(dim)
     z0, z1 = torch.split(z, C // 2, dim=dim)
-    if odd:
-        z0, z1 = z1, z0
     return z0, z1
 
 
-def unsqueeze(z0, z1, dim=1, odd=False):
-    if odd:
-        z0, z1 = z1, z0
+def unsqueeze(z0, z1, dim=1):
     z = torch.cat([z0, z1], dim=dim)
     return z
 
