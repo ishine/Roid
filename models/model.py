@@ -59,7 +59,8 @@ class TTSModel(nn.Module):
             logp = logp1 + logp2 + logp3 + logp4  # [b, t, t']
             path = maximum_path(logp, attn_mask.squeeze(1)).unsqueeze(1).detach()
         x_mu = torch.matmul(x_mu, path)
-        return x_mu, (z, log_df_dz), dur_pred, (x_mask, z_mask)
+        duration = torch.log(1e-8 + torch.sum(path, -1)) * x_mask
+        return x_mu, (z, log_df_dz), (dur_pred, duration), (x_mask, z_mask)
 
     def infer(self, phoneme, a1, f2, x_length):
         x = self.emb(phoneme, a1, f2)
