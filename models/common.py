@@ -37,11 +37,13 @@ class WaveNet(nn.Module):
             dilation = dilation_rate ** i
             padding = int((kernel_size * dilation - dilation) / 2)
             conv = nn.Conv1d(channels, channels, kernel_size, padding=padding, dilation=dilation)
+            conv = torch.nn.utils.weight_norm(conv, name='weight')
             self.dilated_convs.append(conv)
 
         self.out_convs = nn.ModuleList()
         for i in range(num_layers):
             conv = nn.Conv1d(channels, channels*2, 1)
+            conv = torch.nn.utils.weight_norm(conv, name='weight')
             self.out_convs.append(conv)
 
         self.dropout = nn.Dropout(dropout)
