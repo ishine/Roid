@@ -79,9 +79,9 @@ class AffineCoupling(nn.Module):
         return z0, z1, log_df_dz
 
     def _inverse_transform(self, y0, y1, y_mask, log_df_dz, g):
-        y1 = self.start(y1) * y_mask
-        y1 = self.net(y1, y_mask, g=g)
-        params = self.end(y1)
+        params = self.start(y1) * y_mask
+        params = self.net(params, y_mask, g=g)
+        params = self.end(params)
         t = params[:, :self.split_channels]
         s = torch.tanh(params[:, self.split_channels:]) * self.s_log_scale + self.s_bias
 
@@ -153,10 +153,7 @@ class InvertibleConv1x1(nn.Module):
         L = self.L * self.L_mask + self.I
         U = self.U * self.U_mask + torch.diag(self.sign_s * torch.exp(self.log_s))
         W = self.P @ L @ U
-
-        B = z.size(0)
-        C = z.size(1)
-        z = torch.matmul(W, z.view(B, C, -1)).view(z.size())
+        z = torch.matmul(W, z)
 
         length = torch.sum(z_mask)
         log_df_dz += torch.sum(self.log_s, dim=0) * length
@@ -165,8 +162,7 @@ class InvertibleConv1x1(nn.Module):
 
     def backward(self, y, y_mask, log_df_dz, **kwargs):
         with torch.no_grad():
-            LU = self.L * self.L_mask + self.U * self.U_mask + torch.diag(
-                self.sign_s * torch.exp(self.log_s))
+            LU = self.L * self.L_mask + self.U * self.U_mask + torch.diag(self.sign_s * torch.exp(self.log_s))
 
             y_reshape = y.view(y.size(0), y.size(1), -1)
             y_reshape = torch.lu_solve(y_reshape, LU.unsqueeze(0), self.pivots.unsqueeze(0))
