@@ -45,7 +45,7 @@ class TTSModel(nn.Module):
         path = generate_path(duration.squeeze(1), attn_mask.squeeze(1))
 
         x_mu, dur_pred = self.variance_adopter(x, x_mu, x_mask, path)
-        z, log_df_dz = self.decoder(y, z_mask)
+        z, log_df_dz, z_mask = self.decoder(y, z_mask)
         z *= z_mask
 
         return x_mu, (z, log_df_dz), dur_pred, (x_mask, z_mask)
@@ -60,5 +60,5 @@ class TTSModel(nn.Module):
         x_mu = self.proj_mu(x)
 
         x_mu, y_mask = self.variance_adopter.infer(x, x_mu, x_mask)
-        y, _ = self.decoder.backward(x_mu, y_mask)
+        y, *_ = self.decoder.backward(x_mu, y_mask)
         return y

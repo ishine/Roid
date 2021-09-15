@@ -25,7 +25,7 @@ class Glow(nn.Module):
             z, log_df_dz = flow(z=z, z_mask=z_mask, log_df_dz=log_df_dz, g=g)
         if self.n_sqz > 1:
             z, z_mask = self.unsqueeze(z, z_mask, self.n_sqz)
-        return z, log_df_dz
+        return z, log_df_dz, z_mask
 
     def backward(self, y, y_mask, g=None):
         if self.n_sqz > 1:
@@ -35,7 +35,7 @@ class Glow(nn.Module):
             y, log_df_dz = flow.backward(y=y, y_mask=y_mask, log_dz_df=log_df_dz, g=g)
         if self.n_sqz > 1:
             y, y_mask = self.unsqueeze(y, y_mask, self.n_sqz)
-        return y, log_df_dz
+        return y, log_df_dz, y_mask
 
     @staticmethod
     def squeeze(x, x_mask=None, n_sqz=2):
