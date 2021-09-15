@@ -234,8 +234,8 @@ class InvConvNear(nn.Module):
         B, C, T = x.size()
         x = x.view(B, 2, C // self.n_split, self.n_split // 2, T)
         x = x.permute(0, 1, 3, 2, 4).contiguous().view(B, self.n_split, C // self.n_split, T)
-        length = torch.sum(x_mask, [1, 2])
 
+        length = torch.sum(x_mask, [1, 2])
         if forward:
             weight = self.weight
             log_df_dz += torch.logdet(weight) * (C / self.n_split) * length
