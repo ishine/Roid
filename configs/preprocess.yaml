@@ -1,0 +1,5 @@
+wav_dir: ../../dataset/jsut/wav
+label_dir: ../../dataset/jsut/labels
+orig_sr: 48000
+new_sr: 24000
+output_dir: ./dataset

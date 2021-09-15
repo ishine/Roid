@@ -1,0 +1,40 @@
+seed: 42
+model_dir: ../../models/roid
+resume_checkpoint: false
+
+train:
+  fp16: true
+  batch_size: 32
+  num_epochs: 1000
+  save_interval: 100
+
+data:
+  data_dir: ./DATA
+
+model:
+  n_mel: 80
+
+  embedding:
+    n_phoneme: 38
+    n_accent: 19
+
+  encoder:
+    channels: 192
+    n_heads: 2
+    n_layers: 6
+    dropout: 0.1
+
+  variance_adopter:
+    channels: 192
+    dropout: 0.1
+
+  decoder:
+    channels: 192
+    kernel_size: 5
+    num_flows: 12
+    num_layers: 4
+    dropout: 0.1
+
+optimizer:
+  lr: 1.0
+  betas: [0.9, 0.98]
