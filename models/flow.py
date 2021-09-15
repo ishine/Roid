@@ -5,20 +5,12 @@ import torch.nn as nn
 from .common import WaveNet
 
 
-def squeeze(z, dim=1):
-    C = z.size(dim)
-    z0, z1 = torch.split(z, C // 2, dim=dim)
-    return z0, z1
-
-
-def unsqueeze(z0, z1, dim=1):
-    z = torch.cat([z0, z1], dim=dim)
-    return z
-
-
 class Glow(nn.Module):
-    def __init__(self, in_channels, channels, kernel_size, num_flows, num_layers, gin_channels=0, dropout=0.05):
+    def __init__(self, in_channels, channels, kernel_size, num_flows, num_layers, n_sqz=2, gin_channels=0, dropout=0.05):
         super(Glow, self).__init__()
+
+        self.n_sqz = n_sqz
+
         self.flows = nn.ModuleList()
         for _ in range(num_flows):
             self.flows.append(ActNorm(in_channels))
@@ -26,16 +18,52 @@ class Glow(nn.Module):
             self.flows.append(AffineCoupling(in_channels, channels, kernel_size, num_layers, gin_channels, dropout))
 
     def forward(self, z, z_mask, g=None):
+        if self.n_sqz > 1:
+            z, z_mask = self.squeeze(z, z_mask, self.n_sqz)
         log_df_dz = 0
         for flow in self.flows:
             z, log_df_dz = flow(z=z, z_mask=z_mask, log_df_dz=log_df_dz, g=g)
+        if self.n_sqz > 1:
+            z, z_mask = self.unsqueeze(z, z_mask, self.n_sqz)
         return z, log_df_dz
 
     def backward(self, y, y_mask, g=None):
+        if self.n_sqz > 1:
+            y, y_mask = self.squeeze(y, y_mask, self.n_sqz)
         log_df_dz = 0
         for flow in self.flows:
             y, log_df_dz = flow.backward(y=y, y_mask=y_mask, log_dz_df=log_df_dz, g=g)
+        if self.n_sqz > 1:
+            y, y_mask = self.unsqueeze(y, y_mask, self.n_sqz)
         return y, log_df_dz
+
+    @staticmethod
+    def squeeze(x, x_mask=None, n_sqz=2):
+        b, c, t = x.size()
+
+        t = (t // n_sqz) * n_sqz
+        x = x[:, :, :t]
+        x_sqz = x.view(b, c, t // n_sqz, n_sqz)
+        x_sqz = x_sqz.permute(0, 3, 1, 2).contiguous().view(b, c * n_sqz, t // n_sqz)
+
+        if x_mask is not None:
+            x_mask = x_mask[:, :, n_sqz - 1::n_sqz]
+        else:
+            x_mask = torch.ones(b, 1, t // n_sqz).to(device=x.device, dtype=x.dtype)
+        return x_sqz * x_mask, x_mask
+
+    @staticmethod
+    def unsqueeze(x, x_mask=None, n_sqz=2):
+        b, c, t = x.size()
+
+        x_unsqz = x.view(b, n_sqz, c // n_sqz, t)
+        x_unsqz = x_unsqz.permute(0, 2, 3, 1).contiguous().view(b, c // n_sqz, t * n_sqz)
+
+        if x_mask is not None:
+            x_mask = x_mask.unsqueeze(-1).repeat(1, 1, 1, n_sqz).view(b, 1, t * n_sqz)
+        else:
+            x_mask = torch.ones(b, 1, t * n_sqz).to(device=x.device, dtype=x.dtype)
+        return x_unsqz * x_mask, x_mask
 
 
 class AffineCoupling(nn.Module):
@@ -55,15 +83,15 @@ class AffineCoupling(nn.Module):
         self.end.bias.data.zero_()
 
     def forward(self, z, z_mask, log_df_dz, g=None):
-        z0, z1 = squeeze(z)
+        z0, z1 = self.squeeze(z)
         z0, z1, log_df_dz = self._transform(z0, z1, z_mask, log_df_dz, g=g)
-        z = unsqueeze(z0, z1)
+        z = self.unsqueeze(z0, z1)
         return z, log_df_dz
 
     def backward(self, y, y_mask, log_df_dz, g=None):
-        y0, y1 = squeeze(y)
+        y0, y1 = self.squeeze(y)
         y0, y1, log_df_dz = self._inverse_transform(y0, y1, y_mask, log_df_dz, g=g)
-        y = unsqueeze(y0, y1)
+        y = self.unsqueeze(y0, y1)
         return y, log_df_dz
 
     def _transform(self, z0, z1, z_mask, log_df_dz, g):
@@ -89,6 +117,15 @@ class AffineCoupling(nn.Module):
         log_df_dz -= torch.sum(s.view(y0.size(0), -1), dim=1)
 
         return y0, y1, log_df_dz
+
+    def squeeze(z, dim=1):
+        C = z.size(dim)
+        z0, z1 = torch.split(z, C // 2, dim=dim)
+        return z0, z1
+
+    def unsqueeze(z0, z1, dim=1):
+        z = torch.cat([z0, z1], dim=dim)
+        return z
 
 
 class ActNorm(nn.Module):
