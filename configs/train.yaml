@@ -33,7 +33,7 @@ model:
     kernel_size: 5
     num_flows: 12
     num_layers: 4
-    n_sqz: 1
+    n_sqz: 2
     dropout: 0.05
 
 optimizer:
