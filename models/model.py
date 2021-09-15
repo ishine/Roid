@@ -58,7 +58,7 @@ class TTSModel(nn.Module):
         z, log_df_dz = self.decoder(y, z_mask)
         z *= z_mask
 
-        return x, (z, log_df_dz), (dur_pred, pitch_pred, energy_pred), (x_mask, z_mask)
+        return x_mu, (z, log_df_dz), (dur_pred, pitch_pred, energy_pred), (x_mask, z_mask)
 
     def infer(self, phoneme, a1, f2, x_length):
         x = self.emb(phoneme, a1, f2)
@@ -69,6 +69,6 @@ class TTSModel(nn.Module):
         x = self.encoder(x, pos_emb, x_mask)
         x_mu = self.proj_mu(x)
 
-        x, y_mask = self.variance_adopter.infer(x, x_mu, x_mask)
-        x, _ = self.decoder.backward(x, y_mask)
-        return x
+        x_mu, y_mask = self.variance_adopter.infer(x, x_mu, x_mask)
+        y, _ = self.decoder.backward(x_mu, y_mask)
+        return y
