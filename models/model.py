@@ -48,6 +48,7 @@ class TTSModel(nn.Module):
         z, log_df_dz, z_mask = self.decoder(y, z_mask)
         z *= z_mask
 
+        x_mu = x_mu[:, :, :z.size(-1)]
         return x_mu, (z, log_df_dz), dur_pred, (x_mask, z_mask)
 
     def infer(self, phoneme, a1, f2, x_length):
