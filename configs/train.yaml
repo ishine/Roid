@@ -31,12 +31,10 @@ model:
   decoder:
     channels: 192
     kernel_size: 5
-    dilation_rate: 1
-    n_blocks: 12
-    n_layers: 4
+    num_flows: 12
+    num_layers: 4
     n_sqz: 2
-    n_split: 4
-    p_dropout: 0.05
+    dropout: 0.05
 
 optimizer:
   lr: 1.0
