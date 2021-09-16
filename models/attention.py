@@ -30,6 +30,10 @@ class RelativeMultiHeadAttention(nn.Module):
         self.query_proj = nn.Conv1d(channels, channels, 1)
         self.key_proj = nn.Conv1d(channels, channels, 1)
         self.value_proj = nn.Conv1d(channels, channels, 1)
+        nn.init.xavier_uniform_(self.query_proj.weight)
+        nn.init.xavier_uniform_(self.key_proj.weight)
+        nn.init.xavier_uniform_(self.value_proj.weight)
+
         self.pos_proj = nn.Conv1d(channels, channels, 1, bias=False)
 
         self.dropout = nn.Dropout(p=dropout)
