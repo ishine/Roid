@@ -67,18 +67,19 @@ class WaveNet(nn.Module):
         super(WaveNet, self).__init__()
 
         self.channels = channels
+        self.num_layers = num_layers
 
         self.dilated_convs = nn.ModuleList()
         for i in range(num_layers):
             dilation = dilation_rate ** i
             padding = int((kernel_size * dilation - dilation) / 2)
-            conv = nn.Conv1d(channels, channels, kernel_size, padding=padding, dilation=dilation)
+            conv = nn.Conv1d(channels, channels * 2, kernel_size, padding=padding, dilation=dilation)
             conv = nn.utils.weight_norm(conv)
             self.dilated_convs.append(conv)
 
         self.out_convs = nn.ModuleList()
         for i in range(num_layers):
-            conv = nn.Conv1d(channels, channels*2, 1)
+            conv = nn.Conv1d(channels, channels * 2 if i < num_layers-1 else channels, 1)
             conv = nn.utils.weight_norm(conv)
             self.out_convs.append(conv)
 
@@ -91,15 +92,19 @@ class WaveNet(nn.Module):
         if g is not None:
             g = self.cond_layer(g)
         out = 0
-        for d_conv, o_conv in zip(self.dilated_convs, self.out_convs):
+        for i, (d_conv, o_conv) in enumerate(zip(self.dilated_convs, self.out_convs)):
             x_in = d_conv(x)
             if g is not None:
                 x_in += g
-            x_in = x_in.sigmoid() * x_in.tanh()
-            o1, o2 = o_conv(x_in).chunk(2, dim=1)
-            x = (x + o1) * x_mask
-            x = self.dropout(x)
-            out += o2
+            x_in_a, x_in_b = x_in.chunk(2, dim=1)
+            x_in = x_in_a.sigmoid() * x_in_b.tanh()
+            if i < self.num_layers - 1:
+                o1, o2 = o_conv(x_in).chunk(2, dim=1)
+                x = (x + o1) * x_mask
+                x = self.dropout(x)
+                out += o2
+            else:
+                out += o_conv(x_in)
         return out * x_mask
 
 
