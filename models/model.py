@@ -1,12 +1,10 @@
-import math
 import torch
 import torch.nn as nn
 
 from .common import EmbeddingLayer, RelPositionalEncoding, PreNet
 from .transformer import Transformer
-from .predictors import VariancePredictor
+from .predictors import VarianceAdopter
 from .flow import Glow
-from monotonic_align import maximum_path
 from .utils import sequence_mask, generate_path
 
 
@@ -22,7 +20,7 @@ class TTSModel(nn.Module):
         self.pre_net = PreNet(params.encoder.channels)
         self.encoder = Transformer(**params.encoder)
         self.proj_mu = nn.Conv1d(params.encoder.channels, params.n_mel, 1)
-        self.duration_predictor = VariancePredictor(**params.variance_predictor)
+        self.variance_adopter = VarianceAdopter(**params.variance_adopter)
         self.decoder = Glow(in_channels=params.n_mel, **params.decoder)
 
     def forward(
@@ -32,7 +30,8 @@ class TTSModel(nn.Module):
         f2,
         x_length,
         y,
-        y_length
+        y_length,
+        duration
     ):
         x = self.emb(phoneme, a1, f2)
         x, pos_emb = self.relative_pos_emb(x)
@@ -44,23 +43,15 @@ class TTSModel(nn.Module):
         x = self.encoder(x, pos_emb, x_mask)
         x_mu = self.proj_mu(x)
 
-        dur_pred = self.duration_predictor(x.detach(), x_mask)
+        attn_mask = torch.unsqueeze(x_mask, -1) * torch.unsqueeze(z_mask, 2)
+        path = generate_path(duration.squeeze(1), attn_mask.squeeze(1))
 
+        x_mu, dur_pred = self.variance_adopter(x, x_mu, x_mask, path)
         z, log_df_dz, z_mask = self.decoder(y, z_mask)
         z *= z_mask
-        attn_mask = torch.unsqueeze(x_mask, -1) * torch.unsqueeze(z_mask, 2)
-        with torch.no_grad():
-            x_logs = torch.zeros_like(x_mu)
-            x_s_sq_r = torch.exp(-2 * x_logs)
-            logp1 = torch.sum(-0.5 * math.log(2 * math.pi) - x_logs, [1]).unsqueeze(-1)  # [b, t, 1]
-            logp2 = torch.matmul(x_s_sq_r.transpose(1, 2), -0.5 * (z ** 2))  # [b, t, d] x [b, d, t'] = [b, t, t']
-            logp3 = torch.matmul(x_mu.transpose(1, 2), z)  # [b, t, d] x [b, d, t'] = [b, t, t']
-            logp4 = torch.sum(-0.5 * (x_mu ** 2), [1]).unsqueeze(-1)  # [b, t, 1]
-            logp = logp1 + logp2 + logp3 + logp4  # [b, t, t']
-            path = maximum_path(logp, attn_mask.squeeze(1)).unsqueeze(1).detach()
-        x_mu = torch.matmul(x_mu, path)
-        duration = torch.log(1e-8 + torch.sum(path, -1)) * x_mask
-        return x_mu, (z, log_df_dz), (dur_pred, duration), (x_mask, z_mask)
+
+        x_mu = x_mu[:, :, :z.size(-1)]
+        return x_mu, (z, log_df_dz), dur_pred, (x_mask, z_mask)
 
     def infer(self, phoneme, a1, f2, x_length):
         x = self.emb(phoneme, a1, f2)
@@ -73,15 +64,6 @@ class TTSModel(nn.Module):
         x = self.encoder(x, pos_emb, x_mask)
         x_mu = self.proj_mu(x)
 
-        dur_pred = self.duration_predictor(x, x_mask)
-        dur_pred = torch.exp(dur_pred)
-        dur_pred = torch.round(dur_pred) * x_mask
-        y_lengths = torch.clamp_min(torch.sum(dur_pred, [1, 2]), 1).long()
-        y_mask = sequence_mask(y_lengths).unsqueeze(1).to(x_mask.device)
-        attn_mask = torch.unsqueeze(x_mask, -1) * torch.unsqueeze(y_mask, 2)
-
-        path = generate_path(dur_pred.squeeze(1), attn_mask.squeeze(1))
-        x_mu = torch.matmul(x_mu, path)
-
+        x_mu, y_mask = self.variance_adopter.infer(x, x_mu, x_mask)
         y, *_ = self.decoder.backward(x_mu, y_mask)
         return y
