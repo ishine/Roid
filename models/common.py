@@ -117,6 +117,7 @@ class FFN(nn.Module):
         x = self.act(x)
         x = self.dropout(x)
         x = self.conv2(x * x_mask)
+        x = self.dropout(x)
         return x * x_mask
 
 

@@ -4,7 +4,7 @@ import torch.nn as nn
 from .common import EmbeddingLayer, RelPositionalEncoding, PreNet
 from .transformer import Transformer
 from .predictors import VarianceAdopter
-from .flow_gt import Glow
+from .flow import Glow
 from .utils import sequence_mask, generate_path
 
 

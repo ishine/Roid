@@ -23,6 +23,7 @@ class VCDataset(Dataset):
             energy,
             duration
         ) = torch.load(self.fns[idx])
+        mel += torch.rand_like(mel) / 32768.0
         phoneme, a1, f2 = self.tokenizer(*label)
         return mel, phoneme, a1, f2, pitch, energy, duration, length
 
