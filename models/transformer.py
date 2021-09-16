@@ -8,11 +8,12 @@ class TransformerLayer(nn.Module):
     def __init__(self,
                  channels,
                  n_heads,
+                 kernel_size,
                  dropout):
         super(TransformerLayer, self).__init__()
         self.mha = RelativeSelfAttentionLayer(channels, n_heads, dropout)
         self.norm1 = LayerNorm(channels)
-        self.ff = FFN(channels, dropout=dropout)
+        self.ff = FFN(channels, kernel_size=kernel_size, dropout=dropout)
         self.norm2 = LayerNorm(channels)
 
     def forward(self, x, pos_emb, x_mask):
@@ -29,6 +30,7 @@ class Transformer(nn.Module):
                  channels=192,
                  n_layers=6,
                  n_heads=2,
+                 kernel_size=5,
                  dropout=0.1):
         super(Transformer, self).__init__()
 
@@ -36,6 +38,7 @@ class Transformer(nn.Module):
             TransformerLayer(
                 channels=channels,
                 n_heads=n_heads,
+                kernel_size=kernel_size,
                 dropout=dropout
             ) for _ in range(n_layers)
         ])
