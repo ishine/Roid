@@ -8,10 +8,10 @@ class Glow(nn.Module):
                  in_channels,
                  channels,
                  kernel_size,
-                 dilation_rate,
-                 n_blocks,
-                 n_layers,
-                 p_dropout=0.,
+                 num_flows,
+                 num_layers,
+                 dilation_rate=1,
+                 dropout=0.,
                  n_split=4,
                  n_sqz=2,
                  gin_channels=0):
@@ -20,7 +20,7 @@ class Glow(nn.Module):
         self.n_sqz = n_sqz
 
         self.flows = nn.ModuleList()
-        for b in range(n_blocks):
+        for b in range(num_flows):
             self.flows.append(ActNorm(channels=in_channels * n_sqz))
             self.flows.append(InvConvNear(channels=in_channels * n_sqz, n_split=n_split))
             self.flows.append(
@@ -29,9 +29,9 @@ class Glow(nn.Module):
                     hidden_channels=channels,
                     kernel_size=kernel_size,
                     dilation_rate=dilation_rate,
-                    n_layers=n_layers,
+                    n_layers=num_layers,
                     gin_channels=gin_channels,
-                    p_dropout=p_dropout))
+                    p_dropout=dropout))
 
     def forward(self, x, x_mask, g=None, reverse=False):
         if not reverse:

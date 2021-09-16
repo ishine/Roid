@@ -3,8 +3,9 @@ import torch.nn as nn
 
 from .common import EmbeddingLayer, RelPositionalEncoding, PreNet
 from .transformer import Transformer
+from .attention_gt import Encoder
 from .predictors import VarianceAdopter
-from .flow import Glow
+from .flow_gt import Glow
 from .utils import sequence_mask, generate_path
 
 
@@ -13,12 +14,12 @@ class TTSModel(nn.Module):
         super(TTSModel, self).__init__()
 
         self.emb = EmbeddingLayer(**params.embedding, channels=params.encoder.channels // 3)
-        self.relative_pos_emb = RelPositionalEncoding(
-            params.encoder.channels,
-            params.encoder.dropout
-        )
+        # self.relative_pos_emb = RelPositionalEncoding(
+        #     params.encoder.channels,
+        #     params.encoder.dropout
+        # )
         self.pre_net = PreNet(params.encoder.channels)
-        self.encoder = Transformer(**params.encoder)
+        self.encoder = Encoder(**params.encoder)
         self.proj_mu = nn.Conv1d(params.encoder.channels, params.n_mel, 1)
         self.variance_adopter = VarianceAdopter(**params.variance_adopter)
         self.decoder = Glow(in_channels=params.n_mel, **params.decoder)
@@ -34,13 +35,13 @@ class TTSModel(nn.Module):
         duration
     ):
         x = self.emb(phoneme, a1, f2)
-        x, pos_emb = self.relative_pos_emb(x)
+        # x, pos_emb = self.relative_pos_emb(x)
 
         x_mask = sequence_mask(x_length).unsqueeze(1).to(x.dtype)
         z_mask = sequence_mask(y_length).unsqueeze(1).to(x.dtype)
 
         x = self.pre_net(x, x_mask)
-        x = self.encoder(x, pos_emb, x_mask)
+        x = self.encoder(x, x_mask)
         x_mu = self.proj_mu(x)
 
         attn_mask = torch.unsqueeze(x_mask, -1) * torch.unsqueeze(z_mask, 2)
