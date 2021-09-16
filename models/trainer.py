@@ -95,7 +95,7 @@ class Trainer:
             optimizer.step()
             scheduler.step()
             bar.update()
-            bar.set_postfix_str(f'Loss: {loss:.6f}, LR: {optimizer.optimizer.param_groups[0]["lr"]}')
+            bar.set_postfix_str(f'Loss: {loss:.6f}')
         bar.set_postfix_str(f'Mean Loss: {tracker.loss.mean():.6f}')
         if accelerator.is_main_process:
             self.write_losses(epoch, writer, tracker, mode='train')
