@@ -58,7 +58,7 @@ class Trainer:
         )
 
         model = TTSModel(config.model)
-        optimizer = optim.AdamW(model.parameters(), eps=1e-9, **config.optimizer)
+        optimizer = optim.Adam(model.parameters(), eps=1e-9, **config.optimizer)
 
         epochs = self.load(config, model, optimizer)
 
