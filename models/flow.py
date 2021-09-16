@@ -158,10 +158,6 @@ class ActNorm(nn.Module):
         length = torch.sum(y_mask, dim=[1, 2])
         log_df_dz -= torch.sum(self.log_scale) * length
         return y, log_df_dz
-    
-    def load_state_dict(self, state_dict, strict=True):
-        self.initialized = True
-        super(ActNorm, self).load_state_dict(state_dict, strict)
 
 
 class InvertibleConv1x1(nn.Module):
