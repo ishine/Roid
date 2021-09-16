@@ -122,7 +122,7 @@ class Trainer:
             y_length
         ) = batch
         x, (z, log_df_dz), dur_pred, (x_mask, y_mask) = model(
-            phoneme, a1, f2, x_length, mel, y_length
+            phoneme, a1, f2, x_length, mel, y_length, duration
         )
         loss_mle = mle_loss(z, x, log_df_dz, y_length)
         tgt_dur = torch.log(duration + 1e-4) * x_mask
