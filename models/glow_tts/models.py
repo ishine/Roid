@@ -345,7 +345,7 @@ class FlowGenerator(nn.Module):
                                                                                                      2)  # [b, t', t], [b, t, d] -> [b, d, t']
             w = w * x_mask
             w_ = torch.sum(attn, -1) * x_mask
-            return z_m, (z, logdet), w, (x_mask, z_mask)
+            return (z_m, z_logs), (z, logdet), w, (x_mask, z_mask)
 
     def preprocess(self, y, y_lengths, y_max_length):
         if y_max_length is not None:
