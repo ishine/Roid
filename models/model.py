@@ -45,17 +45,17 @@ class TTSModel(nn.Module):
         x_mu = self.proj_mu(x)
         x_logs = torch.zeros_like(x_mu)
 
-        attn_mask = torch.unsqueeze(x_mask, -1) * torch.unsqueeze(z_mask, 2)
-
         z, log_df_dz, z_mask = self.decoder(y, z_mask)
         z *= z_mask
+
+        attn_mask = torch.unsqueeze(x_mask, -1) * torch.unsqueeze(z_mask, 2)
         with torch.no_grad():
             x_s_sq_r = torch.exp(-2 * x_logs)
-            logp1 = torch.sum(-0.5 * math.log(2 * math.pi) - x_logs, [1]).unsqueeze(-1)  # [b, t, 1]
-            logp2 = torch.matmul(x_s_sq_r.transpose(1, 2), -0.5 * (z ** 2))  # [b, t, d] x [b, d, t'] = [b, t, t']
-            logp3 = torch.matmul((x_mu * x_s_sq_r).transpose(1, 2), z)  # [b, t, d] x [b, d, t'] = [b, t, t']
-            logp4 = torch.sum(-0.5 * (x_mu ** 2) * x_s_sq_r, [1]).unsqueeze(-1)  # [b, t, 1]
-            logp = logp1 + logp2 + logp3 + logp4  # [b, t, t']
+            logp1 = torch.sum(-0.5 * math.log(2 * math.pi) - x_logs, [1]).unsqueeze(-1)
+            logp2 = torch.matmul(x_s_sq_r.transpose(1, 2), -0.5 * (z ** 2))
+            logp3 = torch.matmul((x_mu * x_s_sq_r).transpose(1, 2), z)
+            logp4 = torch.sum(-0.5 * (x_mu ** 2) * x_s_sq_r, [1]).unsqueeze(-1)
+            logp = logp1 + logp2 + logp3 + logp4
             path = maximum_path(logp, attn_mask.squeeze(1)).unsqueeze(1).detach()
 
         z_mu, z_logs, dur_pred = self.variance_adopter(x, x_mu, x_logs, x_mask, path.squeeze(1))
