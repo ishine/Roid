@@ -12,7 +12,8 @@ class Tokenizer:
         phonemes = [[self.dictionary[s]+len(self.dictionary)*i for i in range(self.state_size)] for s in phonemes.split('_')]
         phonemes = sum(phonemes, [])
 
-        a1s = [a1s[i + 1] if i == 0 and a1 == 'xx' else a1s[i - 1] if a1 == 'xx' else a1 for i, a1 in enumerate(a1s.split('_'))]
+        a1s = a1s.split('_')
+        a1s = [a1s[i + 1] if i == 0 and a1 == 'xx' else a1s[i - 1] if a1 == 'xx' else a1 for i, a1 in enumerate(a1s)]
         a1s = [int(a1) / self.a1_coef for a1 in a1s]
         a1s = sum([[a1 for _ in range(self.state_size)] for a1 in a1s], [])
 
