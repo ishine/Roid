@@ -12,7 +12,6 @@ from torch.utils.data import DataLoader
 
 from data import VCDataset, collate_fn
 from .model import TTSModel
-from .glow_tts import FlowGenerator
 from .loss import mle_loss
 from .lr_scheduler import NoamLR
 from utils import seed_everything, Tracker
