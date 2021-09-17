@@ -13,6 +13,7 @@ constant_term = 0.5 * math.log(2 * math.pi)
 #     return loss
 
 def mle_loss(z, m, logdet, mask):
+    print(z.size(), m.size(), logdet.size(), mask.size())
     l = 0.5 * torch.sum((z - m) ** 2)  # neg normal likelihood w/o the constant term
     l = l - torch.sum(logdet)  # log jacobian determinant
     l = l / torch.sum(torch.ones_like(z) * mask)  # averaging across batch, channel and time axes
