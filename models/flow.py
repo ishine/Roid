@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from .common import WaveNet
 
@@ -14,7 +15,7 @@ class Glow(nn.Module):
         self.flows = nn.ModuleList()
         for _ in range(num_flows):
             self.flows.append(ActNorm(in_channels * n_sqz))
-            self.flows.append(InvertibleConv1x1(in_channels * n_sqz))
+            self.flows.append(Invertible1x1Conv(in_channels * n_sqz))
             self.flows.append(AffineCoupling(in_channels * n_sqz, channels, kernel_size, num_layers, gin_channels, dropout))
 
     def forward(self, z, z_mask, g=None):
@@ -79,28 +80,64 @@ class ActNorm(nn.Module):
 
     def forward(self, z, z_mask, log_df_dz, **kwargs):
         if not self.initialized:
-            log_std = torch.log(torch.std(z, dim=[0, 2]) + self.eps)
-            mean = torch.mean(z, dim=[0, 2])
-            self.log_scale.data.copy_(log_std.view(self.dimensions))
-            self.bias.data.copy_(mean.view(self.dimensions))
+            self.initialize(z, z_mask)
             self.initialized = True
 
-        z = (z - self.bias) / torch.exp(self.log_scale)
+        z = z * torch.exp(self.log_scale) + self.bias
 
         length = torch.sum(z_mask, dim=[1, 2])
         log_df_dz += torch.sum(self.log_scale) * length
         return z, log_df_dz
 
     def backward(self, y, y_mask, log_df_dz, **kwargs):
-        y = y * torch.exp(self.log_scale) + self.bias
+        y = (y - self.bias) * torch.exp(-self.log_scale)
         length = torch.sum(y_mask, dim=[1, 2])
         log_df_dz -= torch.sum(self.log_scale) * length
         return y, log_df_dz
 
+    @torch.no_grad()
+    def initialize(self, x, x_mask):
+        denom = torch.sum(x_mask, [0, 2])
+        m = torch.sum(x * x_mask, [0, 2]) / denom
+        m_sq = torch.sum(x * x * x_mask, [0, 2]) / denom
+        v = m_sq - (m ** 2)
+        logs = 0.5 * torch.log(torch.clamp_min(v, 1e-6))
 
-class InvertibleConv1x1(nn.Module):
+        bias_init = (-m * torch.exp(-logs)).view(self.dimensions)
+        logs_init = (-logs).view(self.dimensions)
+
+        self.bias.data.copy_(bias_init)
+        self.log_scale.data.copy_(logs_init)
+
+
+class Invertible1x1Conv(nn.Module):
     def __init__(self, channels):
-        super(InvertibleConv1x1, self).__init__()
+        super(Invertible1x1Conv, self).__init__()
+        self.channels = channels
+
+        w_init = torch.linalg.qr(torch.FloatTensor(self.channels, self.channels).normal_())[0]
+        self.weight = nn.Parameter(w_init)
+
+    def forward(self, z, z_mask, log_df_dz, **kwargs):
+        weight = self.weight
+        z = F.conv1d(z, weight.unsqueeze(-1))
+
+        length = torch.sum(z_mask, dim=[1, 2])
+        log_df_dz += torch.slogdet(weight)[1] * length
+        return z, log_df_dz
+
+    def backward(self, y, y_mask, log_df_dz, **kwargs):
+        weight = self.weight.inverse()
+        y = F.conv1d(y, weight.unsqueeze(-1))
+
+        length = torch.sum(y_mask, dim=[1, 2])
+        log_df_dz -= torch.slogdet(weight)[1] * length
+        return y, log_df_dz
+
+
+class Invertible1x1ConvLU(nn.Module):
+    def __init__(self, channels):
+        super(Invertible1x1ConvLU, self).__init__()
 
         W = torch.zeros((channels, channels), dtype=torch.float32)
         nn.init.orthogonal_(W)
@@ -194,7 +231,7 @@ class AffineCoupling(nn.Module):
         t = params[:, :self.split_channels, :]
         s = params[:, self.split_channels:, :]
 
-        y0 = torch.exp(-s) * (y0 - t)
+        y0 = (y0 - t) * torch.exp(-s)
         log_df_dz -= torch.sum(s, dim=[1, 2])
 
         return y0, y1, log_df_dz
