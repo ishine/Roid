@@ -102,7 +102,7 @@ class WaveNet(nn.Module):
                 o1, o2 = o_conv(x_in).chunk(2, dim=1)
                 x = (x + o1) * x_mask
                 x = self.dropout(x)
-                out += o2
+                out += o2 * x_mask
             else:
                 out += o_conv(x_in)
         return out * x_mask
