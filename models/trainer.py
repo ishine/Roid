@@ -80,6 +80,7 @@ class Trainer:
                         accelerator.unwrap_model(model),
                         optimizer
                     )
+            scheduler.step()
         if accelerator.is_main_process:
             writer.close()
 
@@ -93,7 +94,6 @@ class Trainer:
             accelerator.backward(loss)
             accelerator.clip_grad_norm_(model.parameters(), 5)
             optimizer.step()
-            scheduler.step()
             bar.update()
             bar.set_postfix_str(f'Loss: {loss:.6f}')
         bar.set_postfix_str(f'Mean Loss: {tracker.loss.mean():.6f}')
