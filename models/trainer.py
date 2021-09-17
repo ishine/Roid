@@ -58,8 +58,7 @@ class Trainer:
             collate_fn=collate_fn
         )
 
-        # model = TTSModel(config.model)
-        model = FlowGenerator()
+        model = TTSModel(config.model)
         optimizer = optim.AdamW(model.parameters(), eps=1e-9, **config.optimizer)
 
         epochs = self.load(config, model, optimizer)
