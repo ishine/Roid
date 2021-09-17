@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from .common import WaveNet
 
@@ -65,67 +64,6 @@ class Glow(nn.Module):
         else:
             x_mask = torch.ones(b, 1, t * n_sqz).to(device=x.device, dtype=x.dtype)
         return x_unsqz * x_mask, x_mask
-
-
-class AffineCoupling(nn.Module):
-
-    def __init__(self, in_channels, channels, kernel_size, num_layers, gin_channels=0, dropout=0.05):
-        super(AffineCoupling, self).__init__()
-
-        self.split_channels = in_channels // 2
-
-        self.start = torch.nn.utils.weight_norm(nn.Conv1d(in_channels // 2, channels, 1))
-        self.net = WaveNet(channels, kernel_size, num_layers, gin_channels=gin_channels, dropout=dropout)
-        self.end = nn.Conv1d(channels, in_channels, 1)
-        self.end.weight.data.zero_()
-        self.end.bias.data.zero_()
-
-    def forward(self, z, z_mask, log_df_dz, g=None):
-        z0, z1 = self.squeeze(z)
-        z0, z1, log_df_dz = self._transform(z0, z1, z_mask, log_df_dz, g=g)
-        z = self.unsqueeze(z0, z1)
-        return z, log_df_dz
-
-    def backward(self, y, y_mask, log_df_dz, g=None):
-        y0, y1 = self.squeeze(y)
-        y0, y1, log_df_dz = self._inverse_transform(y0, y1, y_mask, log_df_dz, g=g)
-        y = self.unsqueeze(y0, y1)
-        return y, log_df_dz
-
-    def _transform(self, z0, z1, z_mask, log_df_dz, g):
-        params = self.start(z1) * z_mask
-        params = self.net(params, z_mask, g=g)
-        params = self.end(params)
-        t = params[:, :self.split_channels, :]
-        s = params[:, self.split_channels:, :]
-
-        z0 = z0 * torch.exp(s) + t
-        log_df_dz += torch.sum(s, dim=[1, 2])
-
-        return z0, z1, log_df_dz
-
-    def _inverse_transform(self, y0, y1, y_mask, log_df_dz, g):
-        params = self.start(y1) * y_mask
-        params = self.net(params, y_mask, g=g)
-        params = self.end(params)
-        t = params[:, :self.split_channels, :]
-        s = params[:, self.split_channels:, :]
-
-        y0 = torch.exp(-s) * (y0 - t)
-        log_df_dz -= torch.sum(s, dim=[1, 2])
-
-        return y0, y1, log_df_dz
-
-    @staticmethod
-    def squeeze(z, dim=1):
-        C = z.size(dim)
-        z0, z1 = torch.split(z, C // 2, dim=dim)
-        return z0, z1
-
-    @staticmethod
-    def unsqueeze(z0, z1, dim=1):
-        z = torch.cat([z0, z1], dim=dim)
-        return z
 
 
 class ActNorm(nn.Module):
@@ -212,42 +150,62 @@ class InvertibleConv1x1(nn.Module):
         return y, log_df_dz
 
 
-class InvConvNear(nn.Module):
-    def __init__(self, channels, n_split=4):
-        super().__init__()
-        assert (n_split % 2 == 0)
-        self.channels = channels
-        self.n_split = n_split
+class AffineCoupling(nn.Module):
 
-        w_init = torch.linalg.qr(torch.FloatTensor(self.n_split, self.n_split).normal_())[0]
-        if torch.det(w_init) < 0:
-            w_init[:, 0] = -1 * w_init[:, 0]
-        self.weight = nn.Parameter(w_init)
+    def __init__(self, in_channels, channels, kernel_size, num_layers, gin_channels=0, dropout=0.05):
+        super(AffineCoupling, self).__init__()
 
-    def forward(self, z, z_mask, log_df_dz, **kwargs):
-        return self.process(z, z_mask, log_df_dz, forward=True)
+        self.split_channels = in_channels // 2
 
-    def backward(self, y, y_mask, log_df_dz, **kwargs):
-        return self.process(y, y_mask, log_df_dz, forward=False)
+        self.start = torch.nn.utils.weight_norm(nn.Conv1d(in_channels // 2, channels, 1))
+        self.net = WaveNet(channels, kernel_size, num_layers, gin_channels=gin_channels, dropout=dropout)
+        self.end = nn.Conv1d(channels, in_channels, 1)
+        self.end.weight.data.zero_()
+        self.end.bias.data.zero_()
 
-    def process(self, x, x_mask, log_df_dz, forward=True):
-        B, C, T = x.size()
-        x = x.view(B, 2, C // self.n_split, self.n_split // 2, T)
-        x = x.permute(0, 1, 3, 2, 4).contiguous().view(B, self.n_split, C // self.n_split, T)
-
-        length = torch.sum(x_mask, [1, 2])
-        if forward:
-            weight = self.weight
-            log_df_dz += torch.logdet(weight) * (C / self.n_split) * length
-        else:
-            weight = torch.inverse(self.weight.float()).to(dtype=self.weight.dtype)
-            log_df_dz += torch.logdet(weight) * (C / self.n_split) * length
-
-        weight = weight.view(self.n_split, self.n_split, 1, 1)
-        z = F.conv2d(x, weight)
-
-        z = z.view(B, 2, self.n_split // 2, C // self.n_split, T)
-        z = z.permute(0, 1, 3, 2, 4).contiguous().view(B, C, T) * x_mask
+    def forward(self, z, z_mask, log_df_dz, g=None):
+        z0, z1 = self.squeeze(z)
+        z0, z1, log_df_dz = self._transform(z0, z1, z_mask, log_df_dz, g=g)
+        z = self.unsqueeze(z0, z1)
         return z, log_df_dz
 
+    def backward(self, y, y_mask, log_df_dz, g=None):
+        y0, y1 = self.squeeze(y)
+        y0, y1, log_df_dz = self._inverse_transform(y0, y1, y_mask, log_df_dz, g=g)
+        y = self.unsqueeze(y0, y1)
+        return y, log_df_dz
 
+    def _transform(self, z0, z1, z_mask, log_df_dz, g):
+        params = self.start(z1) * z_mask
+        params = self.net(params, z_mask, g=g)
+        params = self.end(params)
+        t = params[:, :self.split_channels, :]
+        s = params[:, self.split_channels:, :]
+
+        z0 = z0 * torch.exp(s) + t
+        log_df_dz += torch.sum(s, dim=[1, 2])
+
+        return z0, z1, log_df_dz
+
+    def _inverse_transform(self, y0, y1, y_mask, log_df_dz, g):
+        params = self.start(y1) * y_mask
+        params = self.net(params, y_mask, g=g)
+        params = self.end(params)
+        t = params[:, :self.split_channels, :]
+        s = params[:, self.split_channels:, :]
+
+        y0 = torch.exp(-s) * (y0 - t)
+        log_df_dz -= torch.sum(s, dim=[1, 2])
+
+        return y0, y1, log_df_dz
+
+    @staticmethod
+    def squeeze(z, dim=1):
+        C = z.size(dim)
+        z0, z1 = torch.split(z, C // 2, dim=dim)
+        return z0, z1
+
+    @staticmethod
+    def unsqueeze(z0, z1, dim=1):
+        z = torch.cat([z0, z1], dim=dim)
+        return z

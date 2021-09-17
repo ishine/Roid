@@ -65,5 +65,6 @@ class TTSModel(nn.Module):
         x_mu = self.proj_mu(x)
 
         x_mu, y_mask = self.variance_adopter.infer(x, x_mu, x_mask)
+
         y, *_ = self.decoder.backward(x_mu, y_mask)
         return y
