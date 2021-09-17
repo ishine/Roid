@@ -217,10 +217,10 @@ class AffineCoupling(nn.Module):
         params = self.net(params, z_mask, g=g)
         params = self.end(params)
         t = params[:, :self.split_channels, :]
-        s = params[:, self.split_channels:, :]
+        logs = params[:, self.split_channels:, :]
 
-        z0 = z0 * torch.exp(s) + t
-        log_df_dz += torch.sum(s, dim=[1, 2])
+        z0 = z0 * torch.exp(logs) + t
+        log_df_dz += torch.sum(logs, dim=[1, 2])
 
         return z0, z1, log_df_dz
 
@@ -229,10 +229,10 @@ class AffineCoupling(nn.Module):
         params = self.net(params, y_mask, g=g)
         params = self.end(params)
         t = params[:, :self.split_channels, :]
-        s = params[:, self.split_channels:, :]
+        logs = params[:, self.split_channels:, :]
 
-        y0 = (y0 - t) * torch.exp(-s)
-        log_df_dz -= torch.sum(s, dim=[1, 2])
+        y0 = (y0 - t) * torch.exp(-logs)
+        log_df_dz -= torch.sum(logs, dim=[1, 2])
 
         return y0, y1, log_df_dz
 
