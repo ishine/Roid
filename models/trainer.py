@@ -128,7 +128,7 @@ class Trainer:
         )
         loss_mle = mle_loss(z, z_m, z_logs, log_df_dz, y_mask)
         tgt_dur = torch.log(duration + 1e-4) * x_mask
-        loss_duration = F.mse_loss(dur_pred, tgt_dur.to(x.dtype))
+        loss_duration = F.mse_loss(dur_pred, tgt_dur.to(z_m.dtype))
         loss = loss_mle + loss_duration
         tracker.update(
             loss=loss.item(),
