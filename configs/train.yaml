@@ -3,7 +3,7 @@ model_dir: ../../models/roid
 resume_checkpoint: false
 
 train:
-  fp16: false
+  fp16: true
   batch_size: 32
   num_epochs: 100
   save_interval: 100
