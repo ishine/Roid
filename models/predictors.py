@@ -20,14 +20,16 @@ class VarianceAdopter(nn.Module):
         self,
         x,
         x_mu,
+        x_logs,
         x_mask,
         path
     ):
         dur_pred = self.duration_predictor(x.detach(), x_mask)
-        x_mu = self.length_regulator(x_mu, path)
-        return x_mu, dur_pred
+        z_mu = self.length_regulator(x_mu, path)
+        z_logs = self.length_regulator(x_logs, path)
+        return z_mu, z_logs, dur_pred
 
-    def infer(self, x, x_mu, x_mask):
+    def infer(self, x, x_mu, x_logs, x_mask):
         dur_pred = self.duration_predictor(x, x_mask)
         dur_pred = torch.exp(dur_pred)
         dur_pred = torch.round(dur_pred) * x_mask
@@ -37,8 +39,9 @@ class VarianceAdopter(nn.Module):
 
         path = generate_path(dur_pred.squeeze(1), attn_mask.squeeze(1))
 
-        x_mu = self.length_regulator(x_mu, path)
-        return x_mu, y_mask
+        z_mu = self.length_regulator(x_mu, path)
+        z_logs = self.length_regulator(x_logs, path)
+        return z_mu, z_logs, y_mask
 
 
 class VariancePredictor(nn.Module):

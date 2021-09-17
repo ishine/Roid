@@ -42,16 +42,19 @@ class TTSModel(nn.Module):
         x = self.pre_net(x, x_mask)
         x = self.encoder(x, pos_emb, x_mask)
         x_mu = self.proj_mu(x)
+        x_logs = torch.zeros_like(x_mu)
 
         attn_mask = torch.unsqueeze(x_mask, -1) * torch.unsqueeze(z_mask, 2)
         path = generate_path(duration.squeeze(1), attn_mask.squeeze(1))
 
-        x_mu, dur_pred = self.variance_adopter(x, x_mu, x_mask, path)
+        z_mu, z_logs, dur_pred = self.variance_adopter(x, x_mu, x_logs, x_mask, path)
+
         z, log_df_dz, z_mask = self.decoder(y, z_mask)
         z *= z_mask
 
-        x_mu = x_mu[:, :, :z.size(-1)]
-        return x_mu, (z, log_df_dz), dur_pred, (x_mask, z_mask)
+        z_mu = z_mu[:, :, :z.size(-1)]
+        z_logs = z_logs[:, :, :z.size(-1)]
+        return (z_mu, z_logs), (z, log_df_dz), dur_pred, (x_mask, z_mask)
 
     def infer(self, phoneme, a1, f2, x_length):
         x = self.emb(phoneme, a1, f2)
