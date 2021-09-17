@@ -297,5 +297,4 @@ class TacotronSTFT(nn.Module):
         magnitudes = magnitudes.data
         mel_output = torch.matmul(self.mel_basis, magnitudes)
         mel_output = self.spectral_normalize(mel_output)
-        energy = torch.norm(magnitudes, dim=1)
-        return mel_output, energy
+        return mel_output
