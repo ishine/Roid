@@ -9,4 +9,4 @@ def mle_loss(z, m, log_df_dz, length):
     loss -= torch.sum(log_df_dz)
     loss /= torch.sum(length)
     loss += constant_term
-    return loss.half()
+    return loss
