@@ -113,7 +113,7 @@ class FFN(nn.Module):
         super(FFN, self).__init__()
 
         self.conv1 = nn.Conv1d(channels, channels, kernel_size, padding=kernel_size // 2)
-        self.act = nn.SiLU()
+        self.act = nn.ReLU()
         self.conv2 = nn.Conv1d(channels, channels, kernel_size, padding=kernel_size // 2)
         self.dropout = nn.Dropout(dropout)
 
