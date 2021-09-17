@@ -12,6 +12,7 @@ from torch.utils.data import DataLoader
 
 from data import VCDataset, collate_fn
 from .model import TTSModel
+from .glow_tts import FlowGenerator
 from .loss import mle_loss
 from .lr_scheduler import NoamLR
 from utils import seed_everything, Tracker
@@ -57,7 +58,8 @@ class Trainer:
             collate_fn=collate_fn
         )
 
-        model = TTSModel(config.model)
+        # model = TTSModel(config.model)
+        model = FlowGenerator()
         optimizer = optim.AdamW(model.parameters(), eps=1e-9, **config.optimizer)
 
         epochs = self.load(config, model, optimizer)
