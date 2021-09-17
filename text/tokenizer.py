@@ -9,14 +9,14 @@ class Tokenizer:
         self.accent_dict = self.build_accent_dict()
 
     def __call__(self, phonemes, a1s, f2s):
-        phonemes = [[self.dictionary[s]+len(self.dictionary)*i for i in range(self.state_size)] for s in phonemes.split('|')]
+        phonemes = [[self.dictionary[s]+len(self.dictionary)*i for i in range(self.state_size)] for s in phonemes.split('_')]
         phonemes = sum(phonemes, [])
 
-        a1s = [a1s[i + 1] if i == 0 and a1 == 'xx' else a1s[i - 1] if a1 == 'xx' else a1 for i, a1 in enumerate(a1s.split('|'))]
+        a1s = [a1s[i + 1] if i == 0 and a1 == 'xx' else a1s[i - 1] if a1 == 'xx' else a1 for i, a1 in enumerate(a1s.split('_'))]
         a1s = [int(a1) / self.a1_coef for a1 in a1s]
         a1s = sum([[a1 for _ in range(self.state_size)] for a1 in a1s], [])
 
-        f2s = [self.accent_dict[f2] for f2 in f2s.split('|')]
+        f2s = [self.accent_dict[f2] for f2 in f2s.split('_')]
         f2s = sum([[f2 for _ in range(self.state_size)] for f2 in f2s], [])
 
         phonemes = torch.LongTensor(phonemes)
