@@ -117,16 +117,15 @@ class Trainer:
             f2,
             pitch,
             energy,
-            duration,
+            _,
             x_length,
             y_length
         ) = batch
-        (z_m, z_logs), (z, log_df_dz), dur_pred, (x_mask, y_mask) = model(
-            phoneme, a1, f2, x_length, mel, y_length, duration
+        (z_m, z_logs), (z, log_df_dz), (dur_pred, duration), (x_mask, y_mask) = model(
+            phoneme, a1, f2, x_length, mel, y_length
         )
         loss_mle = mle_loss(z, z_m, z_logs, log_df_dz, y_mask)
-        tgt_dur = torch.log(duration + 1e-4) * x_mask
-        loss_duration = F.mse_loss(dur_pred, tgt_dur.to(z_m.dtype))
+        loss_duration = F.mse_loss(dur_pred, duration.to(z_m.dtype))
         loss = loss_mle + loss_duration
         tracker.update(
             loss=loss.item(),
