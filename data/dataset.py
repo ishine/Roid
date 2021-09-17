@@ -45,7 +45,7 @@ def collate_fn(batch):
         phoneme,
         a1,
         f2,
-        mel,
         x_length,
+        mel,
         y_length
     )
