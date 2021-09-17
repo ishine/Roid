@@ -6,7 +6,7 @@ train:
   fp16: true
   batch_size: 32
   num_epochs: 100
-  save_interval: 100
+  save_interval: 50
 
 data:
   data_dir: ./DATA
