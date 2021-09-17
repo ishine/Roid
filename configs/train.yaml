@@ -9,7 +9,7 @@ train:
   save_interval: 50
 
 data:
-  data_dir: ./DATA
+  data_file_path: ./filelists/data.txt
 
 model:
   n_mel: 80

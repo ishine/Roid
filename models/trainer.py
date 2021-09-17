@@ -112,14 +112,11 @@ class Trainer:
 
     def _handle_batch(self, batch, model, tracker):
         (
-            mel,
             phoneme,
             a1,
             f2,
-            pitch,
-            energy,
-            _,
             x_length,
+            mel,
             y_length
         ) = batch
         (z_m, z_logs), (z, log_df_dz), (dur_pred, duration), (x_mask, y_mask) = model(
@@ -136,13 +133,15 @@ class Trainer:
         return loss
 
     def prepare_data(self, config):
-        data_dir = Path(config.data_dir)
-        assert data_dir.exists()
+        data_file_path = Path(config.data_file_path)
+        assert data_file_path.exists()
 
-        fns = list(sorted(list(data_dir.glob('*.pt'))))
+        with open(data_file_path, 'r') as f:
+            data = f.readlines()
+
         valid_size = 100
-        valid = fns[:valid_size]
-        train = fns[valid_size:]
+        valid = data[:valid_size]
+        train = data[valid_size:]
         return train, valid
 
     def load(self, config, model, optimizer):
