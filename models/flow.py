@@ -84,6 +84,7 @@ class ActNorm(nn.Module):
             self.initialized = True
 
         z = z * torch.exp(self.log_scale) + self.bias
+        z *= z_mask
 
         length = torch.sum(z_mask, dim=[1, 2])
         log_df_dz += torch.sum(self.log_scale) * length
@@ -91,6 +92,7 @@ class ActNorm(nn.Module):
 
     def backward(self, y, y_mask, log_df_dz, **kwargs):
         y = (y - self.bias) * torch.exp(-self.log_scale)
+        y *= y_mask
         length = torch.sum(y_mask, dim=[1, 2])
         log_df_dz -= torch.sum(self.log_scale) * length
         return y, log_df_dz
@@ -121,6 +123,7 @@ class Invertible1x1Conv(nn.Module):
     def forward(self, z, z_mask, log_df_dz, **kwargs):
         weight = self.weight
         z = F.conv1d(z, weight.unsqueeze(-1))
+        z *= z_mask
 
         length = torch.sum(z_mask, dim=[1, 2])
         log_df_dz += torch.slogdet(weight)[1] * length
@@ -129,6 +132,7 @@ class Invertible1x1Conv(nn.Module):
     def backward(self, y, y_mask, log_df_dz, **kwargs):
         weight = self.weight.inverse()
         y = F.conv1d(y, weight.unsqueeze(-1))
+        y *= y_mask
 
         length = torch.sum(y_mask, dim=[1, 2])
         log_df_dz -= torch.slogdet(weight)[1] * length
@@ -166,6 +170,7 @@ class Invertible1x1ConvLU(nn.Module):
         U = self.U * self.U_mask + torch.diag(self.sign_s * torch.exp(self.log_s))
         W = self.P @ L @ U
         z = torch.matmul(W, z)
+        z *= z_mask
 
         length = torch.sum(z_mask, dim=[1, 2])
         log_df_dz += torch.sum(self.log_s, dim=0) * length
@@ -180,6 +185,7 @@ class Invertible1x1ConvLU(nn.Module):
             y_reshape = torch.lu_solve(y_reshape, LU.unsqueeze(0), self.pivots.unsqueeze(0))
             y = y_reshape.view(y.size())
             y = y.contiguous()
+            y *= y_mask
 
         length = torch.sum(y_mask, dim=[1, 2])
         log_df_dz -= torch.sum(self.log_s, dim=0) * length
@@ -220,7 +226,8 @@ class AffineCoupling(nn.Module):
         logs = params[:, self.split_channels:, :]
 
         z0 = z0 * torch.exp(logs) + t
-        log_df_dz += torch.sum(logs, dim=[1, 2])
+        z0 *= z_mask
+        log_df_dz += torch.sum(logs * z_mask, dim=[1, 2])
 
         return z0, z1, log_df_dz
 
@@ -232,7 +239,8 @@ class AffineCoupling(nn.Module):
         logs = params[:, self.split_channels:, :]
 
         y0 = (y0 - t) * torch.exp(-logs)
-        log_df_dz -= torch.sum(logs, dim=[1, 2])
+        y0 *= y_mask
+        log_df_dz -= torch.sum(logs * y_mask, dim=[1, 2])
 
         return y0, y1, log_df_dz
 
