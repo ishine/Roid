@@ -109,7 +109,7 @@ class WaveNet(nn.Module):
 
 
 class FFN(nn.Module):
-    def __init__(self, channels, kernel_size=5, dropout=0.1):
+    def __init__(self, channels, kernel_size=3, dropout=0.1):
         super(FFN, self).__init__()
 
         self.norm = LayerNorm(channels)

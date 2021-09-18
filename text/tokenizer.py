@@ -2,7 +2,7 @@ import torch
 
 
 class Tokenizer:
-    def __init__(self, dictionary_path='./filelists/word_index.txt', state_size=1):
+    def __init__(self, dictionary_path='./filelists/word_index.txt', state_size=3):
         self.a1_coef = 15
         self.state_size = state_size
         self.dictionary = self.load_dictionary(dictionary_path)
