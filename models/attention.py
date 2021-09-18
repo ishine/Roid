@@ -3,15 +3,19 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from .common import LayerNorm
+
 
 class RelativeSelfAttentionLayer(nn.Module):
     def __init__(self, channels, n_heads, dropout):
         super(RelativeSelfAttentionLayer, self).__init__()
+        self.norm = LayerNorm(channels)
         self.mha = RelativeMultiHeadAttention(channels, n_heads, dropout)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x, pos_emb, x_mask):
         attn_mask = x_mask.unsqueeze(2) * x_mask.unsqueeze(-1)
+        x = self.norm(x)
         x = self.mha(x, x, x, pos_emb, attn_mask)
         x = self.dropout(x)
         return x

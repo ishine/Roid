@@ -2,9 +2,9 @@ from torch.optim.lr_scheduler import _LRScheduler
 
 
 class NoamLR(_LRScheduler):
-    def __init__(self, optimizer, warmup_steps=4000, d_model=384, last_epoch=-1):
+    def __init__(self, optimizer, warmup_steps=4000, channels=192, last_epoch=-1):
         self.warmup_steps = warmup_steps
-        self.d_model = d_model
+        self.d_model = channels
         super().__init__(optimizer, last_epoch)
 
     def get_lr(self):

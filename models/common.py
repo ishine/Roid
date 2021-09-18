@@ -24,14 +24,14 @@ class EmbeddingLayer(nn.Module):
 class ConvLayer(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, dropout=0.5):
         super(ConvLayer, self).__init__()
-        self.conv = nn.Conv1d(in_channels, out_channels, kernel_size, padding=kernel_size // 2)
         self.norm = LayerNorm(out_channels)
-        self.act = nn.ReLU()
+        self.conv = nn.Conv1d(in_channels, out_channels, kernel_size, padding=kernel_size // 2)
+        self.act = nn.SiLU()
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x, x_mask):
-        x = self.conv(x * x_mask)
         x = self.norm(x)
+        x = self.conv(x * x_mask)
         x = self.act(x)
         x = self.dropout(x)
         return x
@@ -112,13 +112,15 @@ class FFN(nn.Module):
     def __init__(self, channels, kernel_size=5, dropout=0.1):
         super(FFN, self).__init__()
 
+        self.norm = LayerNorm(channels)
         self.conv1 = nn.Conv1d(channels, channels, kernel_size, padding=kernel_size // 2)
-        self.act = nn.ReLU()
+        self.act = nn.SiLU()
         self.conv2 = nn.Conv1d(channels, channels, kernel_size, padding=kernel_size // 2)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x, x_mask):
-        x = self.conv1(x)
+        x = self.norm(x)
+        x = self.conv1(x * x_mask)
         x = self.act(x)
         x = self.dropout(x)
         x = self.conv2(x * x_mask)

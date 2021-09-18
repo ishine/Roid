@@ -11,6 +11,7 @@ from omegaconf import OmegaConf
 from models import TTSModel
 from hifi_gan import load_hifi_gan
 from text import Tokenizer
+from transform import TacotronSTFT
 
 SR = 24000
 
@@ -19,7 +20,7 @@ def main():
     parser = ArgumentParser()
     parser.add_argument('--model_dir', type=str, required=True)
     parser.add_argument('--hifi_gan', type=str, required=True)
-    parser.add_argument('--data_dir', type=str, default='./DATA')
+    parser.add_argument('--data_file_path', type=str, default='./filelists/data.txt')
     parser.add_argument('--output_dir', type=str, default='./outputs')
     args = parser.parse_args()
 
@@ -37,6 +38,12 @@ def main():
     model, hifi_gan = model.eval().to(device), hifi_gan.eval().to(device)
 
     tokenizer = Tokenizer()
+    to_mel = TacotronSTFT()
+
+    def load_audio(wav_path):
+        wav = torchaudio.load(wav_path)[0]
+        mel = to_mel(wav)
+        return wav, mel
 
     def infer(label):
         phoneme, a1, f2 = tokenizer(*label)
@@ -68,27 +75,22 @@ def main():
         plt.savefig(path)
         plt.close()
 
-    fns = list(sorted(list(Path(args.data_dir).glob('*.pt'))))[:100]
+    with open(args.data_file_path, 'r') as f:
+        lines = f.readlines()
+    lines = lines[:100]
 
-    for fn in tqdm(fns, total=len(fns)):
-        (
-            wav,
-            mel,
-            label,
-            _,
-            _,
-            _,
-            _
-        ) = torch.load(fn)
+    for line in tqdm(lines, total=len(lines)):
+        wav_path, *label = line.strip().split('|')
+        wav, mel = load_audio(wav_path)
         mel_gen, wav_gen = infer(label)
 
-        d = output_dir / os.path.splitext(fn.name)[0]
+        d = output_dir / os.path.splitext(os.path.basename(wav_path))[0]
         d.mkdir(exist_ok=True)
 
         save_wav(wav, d / 'gt.wav')
         save_wav(wav_gen, d / 'gen.wav')
 
-        save_mel_two(mel_gen.squeeze(), mel.squeeze().transpose(-1, -2), d / 'comp.png')
+        save_mel_two(mel_gen.squeeze(), mel.squeeze(), d / 'comp.png')
 
 
 if __name__ == '__main__':
