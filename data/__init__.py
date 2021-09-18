@@ -1,1 +1,1 @@
-from .dataset import VCDataset, collate_fn
+from .dataset import TTSDataset, collate_fn

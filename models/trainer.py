@@ -10,7 +10,7 @@ from omegaconf import OmegaConf
 from accelerate import Accelerator
 from torch.utils.data import DataLoader
 
-from data import VCDataset, collate_fn
+from data import TTSDataset, collate_fn
 from .model import TTSModel
 from .loss import mle_loss
 from .lr_scheduler import NoamLR
@@ -39,8 +39,8 @@ class Trainer:
             writer = None
 
         train_data, valid_data = self.prepare_data(config.data)
-        train_dataset = VCDataset(train_data)
-        valid_dataset = VCDataset(valid_data)
+        train_dataset = TTSDataset(train_data)
+        valid_dataset = TTSDataset(valid_data)
 
         train_loader = DataLoader(
             train_dataset,

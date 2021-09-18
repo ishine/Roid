@@ -8,7 +8,7 @@ from text import Tokenizer
 from transform import TacotronSTFT
 
 
-class VCDataset(Dataset):
+class TTSDataset(Dataset):
     def __init__(self, data):
         self.data = data
         self.tokenizer = Tokenizer()
