@@ -67,7 +67,6 @@ class TTSModel(nn.Module):
 
     def infer(self, phoneme, a1, f2, x_length, noise_scale=0.667):
         x = self.emb(phoneme, a1, f2)
-        x, pos_emb = self.relative_pos_emb(x)
 
         x_mask = sequence_mask(x_length).unsqueeze(1).to(x.dtype)
         x, pos_emb = self.relative_pos_emb(x)
