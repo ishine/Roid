@@ -5,8 +5,8 @@ resume_checkpoint: false
 train:
   fp16: true
   batch_size: 32
-  num_epochs: 100
-  save_interval: 50
+  num_epochs: 1000
+  save_interval: 100
 
 data:
   data_file_path: ./filelists/data.txt
