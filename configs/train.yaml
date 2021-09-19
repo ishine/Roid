@@ -30,7 +30,7 @@ model:
     dropout: 0.1
 
   decoder:
-    channels: 384
+    channels: 192
     kernel_size: 5
     num_flows: 12
     num_layers: 4
