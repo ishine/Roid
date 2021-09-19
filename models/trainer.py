@@ -123,7 +123,7 @@ class Trainer:
             phoneme, a1, f2, x_length, mel, y_length
         )
         loss_mle = mle_loss(z, z_m, z_logs, log_df_dz, y_mask)
-        loss_duration = torch.sum((dur_pred - duration.to(z_m.dtype)) ** 2) / torch.sum(y_length)
+        loss_duration = F.mse_loss(dur_pred, duration.to(z_m.dtype))
         loss = loss_mle + loss_duration
         tracker.update(
             loss=loss.item(),
