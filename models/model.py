@@ -62,8 +62,8 @@ class TTSModel(nn.Module):
 
         z_mu = z_mu[:, :, :z.size(-1)]
         z_logs = z_logs[:, :, :z.size(-1)]
-        # duration = torch.log(torch.sum(path, dim=-1) + 1e-8) * x_mask
-        duration = torch.sum(path, dim=-1)
+        duration = torch.log(torch.sum(path, dim=-1) + 1e-8) * x_mask
+        # duration = torch.sum(path, dim=-1)
         return (z_mu, z_logs), (z, log_df_dz), (dur_pred, duration), (x_mask, z_mask)
 
     def infer(self, phoneme, a1, f2, x_length, noise_scale=0.667):
