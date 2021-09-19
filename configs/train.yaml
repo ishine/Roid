@@ -15,7 +15,7 @@ model:
   n_mel: 80
 
   embedding:
-    n_phoneme: 38
+    n_phoneme: 114
     n_accent: 19
 
   encoder:
