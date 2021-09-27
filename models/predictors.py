@@ -24,14 +24,13 @@ class VarianceAdopter(nn.Module):
         x_mask,
         path
     ):
-        dur_pred = self.duration_predictor(x.detach(), x_mask)
+        dur_pred = torch.relu(self.duration_predictor(x.detach(), x_mask))
         z_mu = self.length_regulator(x_mu, path)
         z_logs = self.length_regulator(x_logs, path)
         return z_mu, z_logs, dur_pred
 
     def infer(self, x, x_mu, x_logs, x_mask):
-        dur_pred = self.duration_predictor(x, x_mask)
-        dur_pred = torch.exp(dur_pred)
+        dur_pred = torch.relu(self.duration_predictor(x, x_mask))
         dur_pred = torch.round(dur_pred) * x_mask
         y_lengths = torch.clamp_min(torch.sum(dur_pred, [1, 2]), 1).long()
         y_mask = sequence_mask(y_lengths).unsqueeze(1).to(x_mask.device)

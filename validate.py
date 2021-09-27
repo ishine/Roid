@@ -45,14 +45,14 @@ def main():
         mel = to_mel(wav)
         return wav, mel
 
+    @torch.no_grad()
     def infer(label):
         phoneme, a1, f2 = tokenizer(*label)
         phoneme, a1, f2 = phoneme.unsqueeze(0).to(device), a1.unsqueeze(0).to(device), f2.unsqueeze(0).to(device)
         length = torch.LongTensor([phoneme.size(-1)]).to(device)
-        with torch.no_grad():
-            mel = model.infer(phoneme, a1, f2, length)
-            wav = hifi_gan(mel)
-            mel, wav = mel.cpu(), wav.squeeze(1).cpu()
+        mel = model.infer(phoneme, a1, f2, length)
+        wav = hifi_gan(mel)
+        mel, wav = mel.cpu(), wav.squeeze(1).cpu()
         return mel, wav
 
     def save_wav(wav, path):
