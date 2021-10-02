@@ -169,4 +169,5 @@ class Trainer:
             writer.add_scalar(f'{mode}/{k}', v.mean(), epoch)
 
     def set_losses(self, bar, tracker):
-        bar.set_postfix_str(f', '.join([f'{k}: {v.mean()}' for k, v in tracker.item()]))
+        print(tracker)
+        bar.set_postfix_str(f', '.join([f'{k}: {v.mean():.6f}' for k, v in tracker.item()]))
