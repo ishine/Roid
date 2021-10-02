@@ -96,8 +96,8 @@ class Trainer:
             optimizer.step()
             scheduler.step()
             bar.update()
-            bar.set_postfix_str(f'Loss: {loss:.6f}')
-        bar.set_postfix_str(f'Mean Loss: {tracker.loss.mean():.6f}')
+            self.set_losses(bar, tracker)
+        self.set_losses(bar, tracker)
         if accelerator.is_main_process:
             self.write_losses(epoch, writer, tracker, mode='train')
         bar.close()
@@ -167,3 +167,6 @@ class Trainer:
     def write_losses(self, epoch, writer, tracker, mode='train'):
         for k, v in tracker.items():
             writer.add_scalar(f'{mode}/{k}', v.mean(), epoch)
+
+    def set_losses(self, bar, tracker):
+        bar.set_postfix_str(f', '.join([f'{k}: {v.mean()}' for k, v in tracker.item()]))
