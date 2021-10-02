@@ -170,4 +170,4 @@ class Trainer:
 
     def set_losses(self, bar, tracker):
         print(tracker)
-        bar.set_postfix_str(f', '.join([f'{k}: {v.mean():.6f}' for k, v in tracker.item()]))
+        bar.set_postfix_str(f', '.join([f'{k}: {v.mean():.6f}' for k, v in tracker.items()]))
