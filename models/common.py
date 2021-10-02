@@ -62,6 +62,28 @@ class PreNet(nn.Module):
         return x
 
 
+def PostNet(params):
+    return nn.Sequential(
+        nn.Conv1d(80, params.decoder.channels, 5, padding=2),
+        nn.BatchNorm1d(params.decoder.channels),
+        nn.Tanh(),
+        nn.Dropout(0.5),
+        nn.Conv1d(params.decoder.channels, params.decoder.channels, 5, padding=2),
+        nn.BatchNorm1d(params.decoder.channels),
+        nn.Tanh(),
+        nn.Dropout(0.5),
+        nn.Conv1d(params.decoder.channels, params.decoder.channels, 5, padding=2),
+        nn.BatchNorm1d(params.decoder.channels),
+        nn.Tanh(),
+        nn.Dropout(0.5),
+        nn.Conv1d(params.decoder.channels, params.decoder.channels, 5, padding=2),
+        nn.BatchNorm1d(params.decoder.channels),
+        nn.Tanh(),
+        nn.Dropout(0.5),
+        nn.Conv1d(params.decoder.channels, 80, 5, padding=2)
+    )
+
+
 class WaveNet(nn.Module):
     def __init__(self, channels, kernel_size, num_layers, dilation_rate=1, gin_channels=0, dropout=0):
         super(WaveNet, self).__init__()

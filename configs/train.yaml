@@ -5,7 +5,7 @@ resume_checkpoint: false
 train:
   fp16: true
   batch_size: 32
-  num_epochs: 1000
+  num_epochs: 2000
   save_interval: 100
 
 data:
@@ -19,14 +19,15 @@ model:
     n_accent: 19
 
   encoder:
-    channels: 192
-    n_heads: 2
+    channels: 576
+    n_heads: 6
     n_layers: 6
     kernel_size: 3
     dropout: 0.1
 
   variance_adopter:
-    channels: 192
+    channels: 576
+    n_layers: 3
     dropout: 0.1
 
   decoder:
