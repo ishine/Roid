@@ -2,7 +2,7 @@ import math
 import torch
 import torch.nn as nn
 
-from .common import EmbeddingLayer, RelPositionalEncoding, PreNet, PostNet
+from .common import EmbeddingLayer, RelPositionalEncoding, PreNet
 from .transformer import Transformer
 from .predictors import VarianceAdopter
 from .glow import Glow
@@ -23,7 +23,6 @@ class TTSModel(nn.Module):
         self.encoder = Transformer(**params.encoder)
         self.proj_mu = nn.Conv1d(params.encoder.channels, params.n_mel, 1)
         self.variance_adopter = VarianceAdopter(**params.variance_adopter)
-        self.post_net = PostNet(params)
         self.decoder = Glow(in_channels=params.n_mel, **params.decoder)
 
     def forward(
@@ -59,12 +58,9 @@ class TTSModel(nn.Module):
             path = maximum_path(logp, attn_mask.squeeze(1)).unsqueeze(1).detach()
 
         z_mu, z_logs, dur_pred = self.variance_adopter(x, x_mu, x_logs, x_length, x_mask, path.squeeze(1))
+
         z_mu = z_mu[:, :, :z.size(-1)]
         z_logs = z_logs[:, :, :z.size(-1)]
-
-        z_mu = z_mu + self.post_net(z_mu)
-        z_mu *= z_mask
-
         duration = torch.sum(path, dim=-1)
         return (z_mu, z_logs), (z, log_df_dz), (dur_pred, duration), (x_mask, z_mask)
 
@@ -80,7 +76,6 @@ class TTSModel(nn.Module):
         x_logs = torch.zeros_like(x_mu)
 
         z_mu, z_logs, z_mask = self.variance_adopter.infer(x_emb, x_mu, x_logs, x_length, x_mask)
-        z_mu = z_mu + self.post_net(z_mu)
 
         z = (z_mu + torch.exp(z_logs) * torch.randn_like(z_mu) * noise_scale) * z_mask
 
