@@ -62,7 +62,8 @@ class TTSModel(nn.Module):
         z_mu = z_mu[:, :, :z.size(-1)]
         z_logs = z_logs[:, :, :z.size(-1)]
 
-        z_mu += self.post_net(z_mu) * z_mask
+        z_mu = z_mu + self.post_net(z_mu)
+        z_mu *= z_mask
 
         duration = torch.sum(path, dim=-1)
         return (z_mu, z_logs), (z, log_df_dz), (dur_pred, duration), (x_mask, z_mask)
@@ -79,7 +80,7 @@ class TTSModel(nn.Module):
         x_logs = torch.zeros_like(x_mu)
 
         z_mu, z_logs, z_mask = self.variance_adopter.infer(x_emb, x_mu, x_logs, x_length, x_mask)
-        z_mu += self.post_net(z_mu)
+        z_mu = z_mu + self.post_net(z_mu)
 
         z = (z_mu + torch.exp(z_logs) * torch.randn_like(z_mu) * noise_scale) * z_mask
 
