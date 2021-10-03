@@ -25,7 +25,7 @@ class VarianceAdopter(nn.Module):
         x_mask,
         path
     ):
-        dur_pred = torch.relu(self.duration_predictor(x, x_mask))
+        dur_pred = torch.relu(self.duration_predictor(x.detach(), x_mask))
         z_mu = self.length_regulator(x_mu, path)
         z_logs = self.length_regulator(x_logs, path)
         return z_mu, z_logs, dur_pred
