@@ -8,7 +8,7 @@ from .utils import sequence_mask, generate_path
 class VarianceAdopter(nn.Module):
     def __init__(self, channels, n_layers, dropout):
         super(VarianceAdopter, self).__init__()
-        self.duration_predictor = VarianceAdopter(
+        self.duration_predictor = VariancePredictor(
             channels=channels,
             n_layers=n_layers,
             dropout=dropout
