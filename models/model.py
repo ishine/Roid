@@ -57,7 +57,7 @@ class TTSModel(nn.Module):
             logp = logp1 + logp2 + logp3 + logp4
             path = maximum_path(logp, attn_mask.squeeze(1)).unsqueeze(1).detach()
 
-        z_mu, z_logs, dur_pred = self.variance_adopter(x, x_mu, x_logs, x_mask, path.squeeze(1))
+        z_mu, z_logs, dur_pred = self.variance_adopter(x, x_mu, x_logs, x_length, x_mask, path.squeeze(1))
 
         z_mu = z_mu[:, :, :z.size(-1)]
         z_logs = z_logs[:, :, :z.size(-1)]
@@ -65,17 +65,17 @@ class TTSModel(nn.Module):
         return (z_mu, z_logs), (z, log_df_dz), (dur_pred, duration), (x_mask, z_mask)
 
     def infer(self, phoneme, a1, f2, x_length, noise_scale=0):
-        x_emb = self.emb(phoneme, a1, f2)
+        x = self.emb(phoneme, a1, f2)
 
-        x_mask = sequence_mask(x_length).unsqueeze(1).to(x_emb.dtype)
-        x, pos_emb = self.relative_pos_emb(x_emb)
+        x_mask = sequence_mask(x_length).unsqueeze(1).to(x.dtype)
+        x, pos_emb = self.relative_pos_emb(x)
 
         x = self.pre_net(x, x_mask)
         x = self.encoder(x, pos_emb, x_mask)
         x_mu = self.proj_mu(x)
         x_logs = torch.zeros_like(x_mu)
 
-        z_mu, z_logs, z_mask = self.variance_adopter.infer(x_emb, x_mu, x_logs, x_mask)
+        z_mu, z_logs, z_mask = self.variance_adopter.infer(x, x_mu, x_logs, x_length, x_mask)
 
         z = (z_mu + torch.exp(z_logs) * torch.randn_like(z_mu) * noise_scale) * z_mask
 
