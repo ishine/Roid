@@ -129,6 +129,12 @@ class WaveNet(nn.Module):
                 out += o_conv(x_in)
         return out * x_mask
 
+    def remove_weight_norm(self):
+        for l in self.dilated_convs:
+            nn.utils.remove_weight_norm(l)
+        for l in self.out_convs:
+            nn.utils.remove_weight_norm(l)
+
 
 class FFN(nn.Module):
     def __init__(self, channels, kernel_size=3, dropout=0.1):

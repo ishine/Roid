@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 
 from .common import LayerNorm
 from .utils import sequence_mask, generate_path
@@ -9,9 +8,9 @@ from .utils import sequence_mask, generate_path
 class VarianceAdopter(nn.Module):
     def __init__(self, channels, n_layers, dropout):
         super(VarianceAdopter, self).__init__()
-        self.duration_predictor = DurationPredictor(
+        self.duration_predictor = VarianceAdopter(
             channels=channels,
-            num_layers=n_layers,
+            n_layers=n_layers,
             dropout=dropout
         )
         self.length_regulator = LengthRegulator()
@@ -21,17 +20,16 @@ class VarianceAdopter(nn.Module):
         x,
         x_mu,
         x_logs,
-        x_length,
         x_mask,
         path
     ):
-        dur_pred = torch.relu(self.duration_predictor(x, x_mask, x_length))
+        dur_pred = torch.relu(self.duration_predictor(x.detach(), x_mask))
         z_mu = self.length_regulator(x_mu, path)
         z_logs = self.length_regulator(x_logs, path)
         return z_mu, z_logs, dur_pred
 
-    def infer(self, x, x_mu, x_logs, x_length, x_mask):
-        dur_pred = torch.relu(self.duration_predictor(x, x_mask, x_length))
+    def infer(self, x, x_mu, x_logs, x_mask):
+        dur_pred = torch.relu(self.duration_predictor(x, x_mask))
         dur_pred = torch.round(dur_pred) * x_mask
         y_lengths = torch.clamp_min(torch.sum(dur_pred, [1, 2]), 1).long()
         y_mask = sequence_mask(y_lengths).unsqueeze(1).to(x_mask.device)
@@ -42,32 +40,6 @@ class VarianceAdopter(nn.Module):
         z_mu = self.length_regulator(x_mu, path)
         z_logs = self.length_regulator(x_logs, path)
         return z_mu, z_logs, y_mask
-
-
-class DurationPredictor(nn.Module):
-    def __init__(self, channels, num_layers, dropout):
-        super().__init__()
-
-        self.lstm = nn.LSTM(
-            channels,
-            channels // 3,
-            num_layers=num_layers,
-            batch_first=True,
-            dropout=dropout,
-            bidirectional=True
-        )
-        self.linear = nn.Linear(channels//3*2, 1)
-
-    def forward(self, x, x_mask, length):
-        x = x.transpose(-1, -2)
-        x_mask = x_mask.transpose(-1, -2)
-        x = pack_padded_sequence(x, length.cpu(), batch_first=True, enforce_sorted=False)
-        x, _ = self.lstm(x)
-        x, _ = pad_packed_sequence(x, batch_first=True)
-        x = self.linear(x)
-        x *= x_mask
-        x = x.transpose(-1, -2)
-        return x
 
 
 class VariancePredictor(nn.Module):

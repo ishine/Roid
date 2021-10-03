@@ -57,7 +57,7 @@ class TTSModel(nn.Module):
             logp = logp1 + logp2 + logp3 + logp4
             path = maximum_path(logp, attn_mask.squeeze(1)).unsqueeze(1).detach()
 
-        z_mu, z_logs, dur_pred = self.variance_adopter(x, x_mu, x_logs, x_length, x_mask, path.squeeze(1))
+        z_mu, z_logs, dur_pred = self.variance_adopter(x, x_mu, x_logs, x_mask, path.squeeze(1))
 
         z_mu = z_mu[:, :, :z.size(-1)]
         z_logs = z_logs[:, :, :z.size(-1)]
@@ -75,9 +75,12 @@ class TTSModel(nn.Module):
         x_mu = self.proj_mu(x)
         x_logs = torch.zeros_like(x_mu)
 
-        z_mu, z_logs, z_mask = self.variance_adopter.infer(x_emb, x_mu, x_logs, x_length, x_mask)
+        z_mu, z_logs, z_mask = self.variance_adopter.infer(x_emb, x_mu, x_logs, x_mask)
 
         z = (z_mu + torch.exp(z_logs) * torch.randn_like(z_mu) * noise_scale) * z_mask
 
         y, *_ = self.decoder.backward(z, z_mask)
         return y
+
+    def remove_weight_norm(self):
+        self.decoder.remove_weight_norm()

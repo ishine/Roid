@@ -33,6 +33,7 @@ def main():
     checkpoint = torch.load(f'{args.model_dir}/latest.ckpt', map_location=device)
     model = TTSModel(config.model)
     model.load_state_dict(checkpoint['model'])
+    model.remove_weight_norm()
     print(f'Loaded {checkpoint["iteration"]} Iteration Model')
     hifi_gan = load_hifi_gan(args.hifi_gan)
     model, hifi_gan = model.eval().to(device), hifi_gan.eval().to(device)
@@ -64,12 +65,15 @@ def main():
             bits_per_sample=16
         )
 
-    def save_mel_two(gen, gt, path):
-        plt.figure(figsize=(10, 7))
-        plt.subplot(211)
+    def save_mels(gen, gen2, gt, path):
+        plt.figure(figsize=(12, 7))
+        plt.subplot(311)
         plt.gca().title.set_text('GEN')
         plt.imshow(gen, aspect='auto', origin='lower')
-        plt.subplot(212)
+        plt.subplot(312)
+        plt.gca().title.set_text('GEN2')
+        plt.imshow(gen2, aspect='auto', origin='lower')
+        plt.subplot(313)
         plt.gca().title.set_text('GT')
         plt.imshow(gt, aspect='auto', origin='lower')
         plt.savefig(path)
@@ -83,6 +87,7 @@ def main():
         wav_path, *label = line.strip().split('|')
         wav, mel = load_audio(wav_path)
         mel_gen, wav_gen = infer(label)
+        wav_gen_recon = to_mel(wav_gen)
 
         d = output_dir / os.path.splitext(os.path.basename(wav_path))[0]
         d.mkdir(exist_ok=True)
@@ -90,7 +95,7 @@ def main():
         save_wav(wav, d / 'gt.wav')
         save_wav(wav_gen, d / 'gen.wav')
 
-        save_mel_two(mel_gen.squeeze(), mel.squeeze(), d / 'comp.png')
+        save_mels(mel_gen.squeeze(), wav_gen_recon.squeeze(), mel.squeeze(), d / 'comp.png')
 
 
 if __name__ == '__main__':

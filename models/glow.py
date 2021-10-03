@@ -66,6 +66,11 @@ class Glow(nn.Module):
             x_mask = torch.ones(b, 1, t * n_sqz).to(device=x.device, dtype=x.dtype)
         return x_unsqz * x_mask, x_mask
 
+    def remove_weight_norm(self):
+        for l in self.flows:
+            if isinstance(l, AffineCoupling):
+                l.remove_weight_norm()
+
 
 class ActNorm(nn.Module):
     def __init__(self, channels, eps=1e-5):
@@ -254,3 +259,7 @@ class AffineCoupling(nn.Module):
     def unsqueeze(z0, z1, dim=1):
         z = torch.cat([z0, z1], dim=dim)
         return z
+
+    def remove_weight_norm(self):
+        nn.utils.remove_weight_norm(self.start)
+        self.net.remove_weight_norm()
