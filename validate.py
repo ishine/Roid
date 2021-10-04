@@ -14,6 +14,7 @@ from text import Tokenizer
 from transform import TacotronSTFT
 
 SR = 24000
+NOISE_SCALE = 0.667
 
 
 def main():
@@ -51,7 +52,7 @@ def main():
         phoneme, a1, f2 = tokenizer(*label)
         phoneme, a1, f2 = phoneme.unsqueeze(0).to(device), a1.unsqueeze(0).to(device), f2.unsqueeze(0).to(device)
         length = torch.LongTensor([phoneme.size(-1)]).to(device)
-        mel = model.infer(phoneme, a1, f2, length)
+        mel = model.infer(phoneme, a1, f2, length, noise_scale=NOISE_SCALE)
         wav = hifi_gan(mel)
         mel, wav = mel.cpu(), wav.squeeze(1).cpu()
         return mel, wav
@@ -60,9 +61,7 @@ def main():
         torchaudio.save(
             str(path),
             wav,
-            24000,
-            encoding='PCM_S',
-            bits_per_sample=16
+            24000
         )
 
     def save_mels(gen, gen2, gt, path):
